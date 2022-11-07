@@ -1,0 +1,145 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+    
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    env:
+      SONAR_SCANNER_VERSION: 4.6.1.2450 # Find the latest version in the "Windows" link on this page:
+                                        # https://docs.sonarqube.org/latest/analysis/scan/sonarscanner/
+      SONAR_SERVER_URL: "https://sonarcloud.io"
+      BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory # Directory where build-wrapper output will be placed
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Set up JDK 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11   
+      - name: Cache SonarQube packages
+        uses: actions/cache@v1
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+      - name: Download and install CPPLINT
+        env:
+          CPPLINT_VERSION: "1.6.1"
+        run: |
+          pip install cpplint==${{env.CPPLINT_VERSION}}
+      - name: Download and set up sonar-scanner
+        env:
+          SONAR_SCANNER_DOWNLOAD_URL: https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${{ env.SONAR_SCANNER_VERSION }}-linux.zip
+        run: |
+          mkdir -p $HOME/.sonar
+          curl -sSLo $HOME/.sonar/sonar-scanner.zip ${{ env.SONAR_SCANNER_DOWNLOAD_URL }} 
+          unzip -o $HOME/.sonar/sonar-scanner.zip -d $HOME/.sonar/
+          echo "$HOME/.sonar/sonar-scanner-${{ env.SONAR_SCANNER_VERSION }}-linux/bin" >> $GITHUB_PATH
+      - name: Download and set up build-wrapper
+        env:
+          BUILD_WRAPPER_DOWNLOAD_URL: ${{ env.SONAR_SERVER_URL }}/static/cpp/build-wrapper-linux-x86.zip
+        run: |
+          curl -sSLo $HOME/.sonar/build-wrapper-linux-x86.zip ${{ env.BUILD_WRAPPER_DOWNLOAD_URL }}
+          unzip -o $HOME/.sonar/build-wrapper-linux-x86.zip -d $HOME/.sonar/
+          echo "$HOME/.sonar/build-wrapper-linux-x86" >> $GITHUB_PATH 
+      - name: Download and install Fledge
+        env:
+          FLEDGE_REPO_URL: "https://github.com/fledge-iot/fledge/archive/refs/tags/v2.0.0.zip" 
+        run: |
+          cd $GITHUB_WORKSPACE/..
+          curl -sSLo fledge-pkg.zip ${{ env.FLEDGE_REPO_URL }}
+          unzip -o fledge-pkg.zip -d .
+          mv fledge-2.0.0 fledge
+          cd fledge
+          sudo apt-get update
+          sudo apt-get install libcurl4-openssl-dev
+          sudo ./requirements.sh
+          sudo make install -j8
+          sudo mkdir -p /usr/include/fledge/rapidjson/
+          find C/common/ -name '*.h' -exec sudo cp -prv '{}' '/usr/include/fledge/' ';'
+          find C/plugins/ -name '*.h' -exec sudo cp -prv '{}' '/usr/include/fledge/' ';'
+          find C/services/ -name '*.h' -exec sudo cp -prv '{}' '/usr/include/fledge/' ';'
+          find C/tasks/ -name '*.h' -exec sudo cp -prv '{}' '/usr/include/fledge/' ';'
+          sudo cp -prv C/thirdparty/rapidjson/include/rapidjson/* /usr/include/fledge/rapidjson/
+          sudo mkdir -p /usr/lib/fledge/
+          sudo cp -prv /usr/local/fledge/lib/* /usr/lib/fledge/
+      - name: Download and install Google Unit Test framework
+        run: |
+          sudo apt-get install libgtest-dev
+          cd /usr/src/gtest
+          sudo cmake CMakeLists.txt
+          sudo make
+          sudo apt-get install libgmock-dev
+      - name: Download and install gcovr
+        run: |
+          sudo apt-get install gcovr
+      - name: Build and coding rules
+        env:
+          FLEDGE_SRC: "$GITHUB_WORKSPACE/../fledge" 
+        run: |
+          export FLEDGE_SRC=${{ env.FLEDGE_SRC }}
+          export FLEDGE_INSTALL=/usr/local/fledge
+          export FLEDGE_ROOT=${{ env.FLEDGE_SRC }}
+          export LD_LIBRARY_PATH=/usr/lib:/usr/local/lib:$FLEDGE_SRC/cmake_build/C/lib:/usr/local/fledge/lib/
+          make clean
+          make build
+          make check
+          make cpplint
+      - name: Run unit tests
+        env:
+          FLEDGE_SRC: "$GITHUB_WORKSPACE/../fledge" 
+        run: |
+          export FLEDGE_SRC=${{ env.FLEDGE_SRC }}
+          export FLEDGE_INSTALL=/usr/local/fledge
+          export FLEDGE_ROOT=${{ env.FLEDGE_SRC }}
+          export FLEDGE_DATA=$FLEDGE_ROOT/data
+          export LD_LIBRARY_PATH=/usr/lib:/usr/local/lib:$FLEDGE_SRC/cmake_build/C/lib:/usr/local/fledge/lib/
+          make unit_tests || (tail -n 2000 /var/log/syslog && false)
+      - name: Archive HTML coverage results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: html-coverage-report
+          path: |
+            build/tests/RunTests_coverage_html
+      - name: Run build-wrapper
+        env:
+          FLEDGE_SRC: "$GITHUB_WORKSPACE/../fledge" 
+        run: |
+          export FLEDGE_SRC=${{ env.FLEDGE_SRC }}
+          export FLEDGE_INSTALL=/usr/local/fledge
+          export FLEDGE_ROOT=${{ env.FLEDGE_SRC }}
+          export LD_LIBRARY_PATH=/usr/lib:/usr/local/lib:$FLEDGE_SRC/cmake_build/C/lib:/usr/local/fledge/lib/
+          make clean
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Coverage
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} cmake --build build/tests --config Release
+          cd build/tests
+          make
+          make RunTests_coverage_sonar
+      - name: Run sonar-scanner
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner --define sonar.host.url="${{ env.SONAR_SERVER_URL }}" --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR }}" --define sonar.organization="fledge-power" --define sonar.projectKey="fledgepower-filter-pivot2opcua" --define sonar.inclusions="**/src/plugin.cpp,**/src/pivot2opcua*.cpp,**/include/pivot2opcua*.h" --define sonar.coverageReportPaths="build/tests/RunTests_coverage_sonar-sonarqube.xml"
+
+      - name: Archive code coverage results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-report
+          path: |
+            build/tests/RunTests_coverage_sonar-sonarqube.xml
+            build/tests/default_config.inc
+            build/tests/base_addrspace.c
+          
