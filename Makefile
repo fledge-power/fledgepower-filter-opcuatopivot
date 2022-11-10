@@ -10,6 +10,13 @@ build:
 	$(Q)cd build && cmake -DCMAKE_BUILD_TYPE=Release -DFLEDGE_INSTALL=$(FLEDGE_INSTALL) ..
 	$(Q)make -C build -j4
 	
+unit_tests:
+	$(Q)rm -rf build/tests/RunTests_coverage_html
+	$(Q)mkdir -p build/tests
+	$(Q)cd build && cmake -DCMAKE_BUILD_TYPE=Coverage -DFLEDGE_INSTALL=$(FLEDGE_INSTALL) ..
+	$(Q)make -C build/tests RunTests_coverage_html -j4
+	@echo "See unit tests coverage result in build/tests/RunTests_coverage_html/index.html"
+
 clean:
 	$(Q)rm -fr build
 log:
@@ -29,4 +36,4 @@ install_plugin: check
 cpplint:
 	$(Q)cpplint --output=eclipse --repository=src --linelength=120 --filter=$(CPPLINT_EXCLUDE) --exclude=include/opcua_statuscodes.h src/* include/*
 	
-.PHONY: all clean build check del_plugin cpplint
+.PHONY: all clean build check del_plugin cpplint unit_tests
