@@ -498,6 +498,9 @@ static const char * const JsonPivotDps2 =
     "PIVOTTS" :{
         "GTIS": {
             "Origin": {"stVal": 4},
+            "ChgValCnt": {"stVal": 4},
+            "NormalSrc": {"stVal": 4},
+            "NormalVal": {"stVal": 4},
             "Cause": {"stVal": 4},
             "Confirmation": {"stVal": false},
             "ComingFrom":  {"stVal": "opcua"},

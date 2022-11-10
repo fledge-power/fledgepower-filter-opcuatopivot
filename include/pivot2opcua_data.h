@@ -56,9 +56,8 @@ class ExchangedDataC {
 /**
  * This structure contains all required information for a given Pivot data
  */
-struct PivotElement {
+struct PivotElement {  // //NOSONAR  No performance issue,: executed once at startup
     explicit PivotElement(const std::string& pivot_type,
-            const std::string& address,
             const std::string& opcType):
         m_pivot_type(pivot_type),
         m_opcType(opcType) {}
@@ -83,12 +82,12 @@ class DataDictionnary {
      * @param key the Pivot Id to search in the dictionnary
      * @return a const_iterator to the element (::isEmpty can be used to check result)
      */
-    inline PivotElementMap_t::const_iterator find(const std::string& key)const;
+    PivotElementMap_t::const_iterator find(const std::string& key)const;
     /**
      * @param it A result of call to ::find
      * @return false if it contains an element. True otherwise
      */
-    inline bool isEmpty(const PivotElementMap_t::const_iterator& it)const;
+    bool isEmpty(const PivotElementMap_t::const_iterator& it)const;
 
  private:
     PivotElementMap_t m_map;

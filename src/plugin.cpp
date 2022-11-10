@@ -17,87 +17,8 @@
 #include "version.h"
 
 // Project includes
+#include "plugin_default_conf.h"
 #include "pivot2opcua_filter.h"
-
-#define FILTER_NAME "pivot2opcua"   // NOLINT //NOSONAR
-
-// PLUGIN DEFAULT EXCHANGED DATA CONF
-#define EXCHANGED_DATA_DEF                   \
-    QUOTE({                                  \
-        "exchanged_data" : {                 \
-            "name" : "opcua",         \
-            "version" : "1.0",               \
-            "datapoints" : [                  \
-                {                            \
-                    "label":"LabelSpsTyp",   \
-                    "pivot_id" : "S114562128", \
-                    "pivot_type" : "SpsTyp",        \
-                    "protocols" :[ \
-                      {\
-                         "name":"iec104", \
-                         "address":"18325-6468171", \
-                         "typeid":"M_SP_TB_1", \
-                         "gi_groups":"station"\
-                      }, \
-                      {\
-                         "name":"opcua", \
-                         "address":"S_1145_6_21_28", \
-                         "typeid":"opcua_sps"\
-                      }\
-                    ] \
-                },  \
-                {                            \
-                    "label":"LabelDpsTyp",   \
-                    "pivot_id" : "S114562127", \
-                    "pivot_type" : "SpsTyp",        \
-                    "protocols" :[ \
-                      {\
-                         "name":"opcua", \
-                         "address":"S_1145_6_21_27", \
-                         "typeid":"opcua_dps"\
-                      }\
-                    ] \
-                },  \
-                {                            \
-                    "label":"LabelMvaTyp",   \
-                    "pivot_id" : "S114562129", \
-                    "pivot_type" : "MvTyp",        \
-                    "protocols" :[ \
-                      {\
-                         "name":"opcua", \
-                         "address":"S_1145_6_21_29", \
-                         "typeid":"opcua_mva"\
-                      }\
-                    ] \
-                },  \
-                {                            \
-                    "label":"LabelMvfTyp",   \
-                    "pivot_id" : "S114562130", \
-                    "pivot_type" : "MvTyp",        \
-                    "protocols" :[ \
-                      {\
-                         "name":"opcua", \
-                         "address":"S_1145_6_21_30", \
-                         "typeid":"opcua_mvf"\
-                      }\
-                    ] \
-                },  \
-                {                            \
-                    "label":"LabelMvfTyp2",   \
-                    "pivot_id" : "S114562131", \
-                    "pivot_type" : "MvTyp",        \
-                    "protocols" :[ \
-                      {\
-                         "name":"opcua", \
-                         "address":"S_1145_6_21_31", \
-                         "typeid":"opcua_mvf"\
-                         "mapping_rule":"PtoMVF_round"\
-                      }\
-                    ] \
-                }  \
-            ]  \
-        }  \
-    })
 
 static const char * const default_config = QUOTE({
                 "plugin" : {
@@ -143,7 +64,8 @@ static PLUGIN_INFORMATION info = {
         PLUGIN_TYPE_FILTER,       // Type
         "1.0.0",                  // Interface version
         default_config                 // Default plugin configuration
-};
+};  // //NOSONAR (Fledge API)
+
 /**
  * Return the information about this plugin
  */
@@ -163,7 +85,7 @@ PLUGIN_INFORMATION *plugin_info() {
 PLUGIN_HANDLE plugin_init(ConfigCategory* config,
                           OUTPUT_HANDLE *outHandle,
                           OUTPUT_STREAM output) {
-    Pivot2OpcuaFilter *filter = new Pivot2OpcuaFilter(FILTER_NAME,
+    Pivot2OpcuaFilter *filter = new Pivot2OpcuaFilter(FILTER_NAME,  // //NOSONAR (Fledge API)
             *config,
             outHandle,
             output);
@@ -199,7 +121,7 @@ void plugin_reconfigure(PLUGIN_HANDLE handle, const std::string& newConfig) {
  */
 void plugin_shutdown(PLUGIN_HANDLE handle) {
     Pivot2OpcuaFilter *filter = static_cast<Pivot2OpcuaFilter*>(handle);
-    delete filter;
+    delete filter;  // //NOSONAR (Fledge API)
 }
 
 // End of extern "C"

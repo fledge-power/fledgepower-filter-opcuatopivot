@@ -14,6 +14,7 @@
 #include <math.h>
 #include <string>
 #include <mutex>
+#include <map>
 #include <regex>
 #include <memory>
 #include <vector>
@@ -32,11 +33,12 @@
 using std::string;
 using std::vector;
 
-class InvalidPivotContent : public std::exception {
+class InvalidPivotContent : public std::exception {     // //NOSONAR
  public:
     explicit InvalidPivotContent(const std::string& context):
     mContext(context) {}
     inline const char* context(void)const {return mContext.c_str();}
+
  private:
     const string mContext;
 };
@@ -60,7 +62,7 @@ class Pivot2OpcuaFilter : public FledgeFilter {
 
     class PivotQuality {
      public:
-        explicit PivotQuality(Datapoints* dict);
+        explicit PivotQuality(const Datapoints* dict);
         uint32_t toDetails(void)const;
         string getSource(void)const {return m_Source;}
         const string& validity(void)const {return m_Validity;}
@@ -93,7 +95,7 @@ class Pivot2OpcuaFilter : public FledgeFilter {
 
     class PivotTimestamp {
      public:
-        explicit PivotTimestamp(Datapoints* dict);
+        explicit PivotTimestamp(const Datapoints* dict);
         uint32_t toDetails(void)const;
         inline int64_t nbSec(void)const {return time_nbSec;}
 
@@ -126,8 +128,8 @@ class Pivot2OpcuaFilter : public FledgeFilter {
     class QualifiedMagVal : public Qualified {
      public:
         explicit QualifiedMagVal(Datapoints* dict);
-        virtual ~QualifiedMagVal(void) = default;
-        virtual Datapoint* createData(const std::string& typeName);
+        ~QualifiedMagVal(void) override = default;
+        Datapoint* createData(const std::string& typeName) override;
 
      private:
         Datapoints* m_mag;
@@ -142,10 +144,9 @@ class Pivot2OpcuaFilter : public FledgeFilter {
     class QualifiedBoolStVal : public Qualified {
      public:
         explicit QualifiedBoolStVal(Datapoints* dict);
-        virtual ~QualifiedBoolStVal(void) = default;
-        virtual Datapoint* createData(const std::string& typeName);
+        ~QualifiedBoolStVal(void) override = default;
+        Datapoint* createData(const std::string& typeName) override;
 
-     public:
         const bool bVal;
     };
     using QualifiedBoolStValPtr = std::unique_ptr<QualifiedBoolStVal>;
@@ -157,7 +158,6 @@ class Pivot2OpcuaFilter : public FledgeFilter {
         virtual ~QualifiedStringStVal(void) = default;
         virtual Datapoint* createData(const std::string& typeName);
 
-     public:
         const string sVal;
     };
     using QualifiedStringStValPtr = std::unique_ptr<QualifiedStringStVal>;
@@ -165,12 +165,14 @@ class Pivot2OpcuaFilter : public FledgeFilter {
     /** Common behavior for PIVOT measurements*/
     class CommonMeasurePivot {
      public:
-        explicit CommonMeasurePivot(Datapoints* dict);
+        explicit CommonMeasurePivot(const Datapoints* dict);
         const std::string& pivotId(void)const {return m_Identifier;}
         virtual ~CommonMeasurePivot(void) = default;
-        void updateReading(const DataDictionnary_Ptr& dictPtr, Reading* orig)const;
+        void updateReading(const DataDictionnary* dictPtr, Reading* orig)const;
 
      private:
+        using FieldDecoder = void (*) (CommonMeasurePivot*, DatapointValue&, const string& name);
+        using decoder_map_t = std::map<std::string, FieldDecoder>;
         static void ignoreField(CommonMeasurePivot* pivot, DatapointValue& data, const string& name);
         static void decodeConfirmation(CommonMeasurePivot* pivot, DatapointValue& data, const string& name);
         static void decodeCause(CommonMeasurePivot* pivot, DatapointValue& data, const string& name);
@@ -181,6 +183,8 @@ class Pivot2OpcuaFilter : public FledgeFilter {
         static void decodeMagVal(CommonMeasurePivot* pivot, DatapointValue& data, const string& name);
         static void decodeSpsVal(CommonMeasurePivot* pivot, DatapointValue& data, const string& name);
         static void decodeDpsVal(CommonMeasurePivot* pivot, DatapointValue& data, const string& name);
+
+        static const decoder_map_t decoder_map;
 
         static const uint32_t FieldMask_cot = 0x0001;   // COT
         static const uint32_t FieldMask_pty = 0x0002;   // Pivot Type

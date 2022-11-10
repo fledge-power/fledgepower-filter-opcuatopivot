@@ -16,9 +16,21 @@
 // Fledge / tools  includes
 #include "config_category.h"
 #include "main_test_configs.h"
+#include "plugin_api.h"
+#include "filter.h"
 
 using namespace std;
 using namespace rapidjson;
+
+extern "C" {
+PLUGIN_HANDLE plugin_init(ConfigCategory* config,
+                          OUTPUT_HANDLE *outHandle,
+                          OUTPUT_STREAM output);
+void plugin_ingest(PLUGIN_HANDLE handle,
+        READINGSET *readingSet);
+void plugin_reconfigure(PLUGIN_HANDLE handle, const std::string& newConfig);
+void plugin_shutdown(PLUGIN_HANDLE handle);
+}
 
 namespace {
 void* stubOutH(&stubOutH);
@@ -969,11 +981,26 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterMissFields) {
     }
 }
 
-// Test Different qualities
-TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterReconfig) {
-    TITLE("*** TEST FILTER Pivot2OpcuaFilterReconfig");
+#undef INGEST
+#define INGEST(rSet, json, _type)  \
+    ReadingSet rSet;                                    \
+    rSet.append(JsonToReading(json, _type));            \
+                                                        \
+    f_reset_outputs();                                  \
+    ASSERT_EQ(called_output_handle, nullptr);           \
+    ASSERT_EQ(called_output_reading, nullptr);          \
+    TRACE("  * INGEST() /" _type);                      \
+    plugin_ingest(plugin, &rSet);                       \
+    ASSERT_EQ(called_output_handle, &stubOutH);         \
+    ASSERT_EQ(called_output_reading, &rSet);
 
-    Pivot2OpcuaFilter filter(FILTER_PARAMS);
+// Test lugin APIS
+TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterApi) {
+    TITLE("*** TEST FILTER Pivot2OpcuaFilterApi");
+
+    ConfigCategory* pConf(&::configEnabled);
+    void(*fOut)(OUTPUT_HANDLE * out, READINGSET *set) = &::f_output_stream;
+    PLUGIN_HANDLE plugin = plugin_init(pConf, stubOutH, fOut);
 
     // reference test
     {
@@ -986,7 +1013,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterReconfig) {
     // Disable filter
     {
         string conf(QUOTE({ "enable" : { "description" : "", "value" : "false", "type" : "string"}}));
-        filter.reconfigure(conf);
+        plugin_reconfigure(plugin, conf);
         const std::string testStr(JsonPivotMvf);
         INGEST(rSet, testStr, "Ref test");
 
@@ -996,10 +1023,11 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterReconfig) {
     // Rre-Enable filter
     {
         string conf(QUOTE({ "enable" : { "description" : "", "value" : "true", "type" : "string"}}));
-        filter.reconfigure(conf);
+        plugin_reconfigure(plugin, conf);
         const std::string testStr(JsonPivotMvf);
         INGEST(rSet, testStr, "Ref test");
 
         DATA_PASSES;
     }
+    plugin_shutdown(plugin);
 }

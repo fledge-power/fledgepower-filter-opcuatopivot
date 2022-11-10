@@ -56,7 +56,7 @@ TEST(Pivot2Opcua_Data, ExchangedDataC) {
 /* PivotElement */
 TEST(Pivot2Opcua_Data, PivotElement) {
     TITLE("*** TEST DATA PivotElement");
-    const PivotElement elt1("type", "address", "opcType");
+    const PivotElement elt1("type", "opcType");
     ASSERT_EQ(elt1.m_pivot_type, string("type"));
     ASSERT_EQ(elt1.m_opcType, string("opcType"));
 }   // test PivotElement

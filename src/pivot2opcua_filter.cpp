@@ -37,39 +37,24 @@ namespace {
 static const string stValName = "stVal";   // //NOLINT
 
 /* HELPER FUNCTIONS*/
-static inline Datapoint* duplicateDatapointValue(const string& name,
-        const DatapointValue* value) {
-    DatapointValue dpv(*value);
-    return new Datapoint(name, dpv);
-}
 
 static inline Datapoint* createStringDatapointValue(const string& name,
         const string& value) {
     DatapointValue dpv(value);
-    return new Datapoint(name, dpv);
+    return new Datapoint(name, dpv);    // //NOSONAR (Use of Fledge API)
 }
 
 static inline Datapoint* createIntDatapointValue(const string& name,
         const int64_t value) {
     static_assert(sizeof(long) >= sizeof(uint64_t));  // NOLINT  FLEDGE API
     DatapointValue dpv(static_cast<long>(value));  // NOLINT  FLEDGE API
-    return new Datapoint(name, dpv);
+    return new Datapoint(name, dpv);    // //NOSONAR (Use of Fledge API)
 }
 
 static inline Datapoint* createFloatDatapointValue(const string& name,
         const float value) {
     DatapointValue dpv(value);
-    return new Datapoint(name, dpv);
-}
-
-inline const string&
-pivot2gtix(const string& pivotType) {
-    return Rules::find_T<string, string>(Rules::pivotTx2GTIx, pivotType, "");
-}
-
-inline const StringVect_t&
-gtix2pivotType(const string& gtix) {
-    return Rules::find_T<string, StringVect_t>(Rules::gtix2pivotTypeMap, gtix, {});
+    return new Datapoint(name, dpv);    // //NOSONAR (Use of Fledge API)
 }
 
 }  // namespace
@@ -87,8 +72,8 @@ gtix2pivotType(const string& gtix) {
  */
 Pivot2OpcuaFilter::Pivot2OpcuaFilter(const string& filterName,
         ConfigCategory& filterConfig,
-        OUTPUT_HANDLE *outHandle,
-        OUTPUT_STREAM output) : m_dictionnary(nullptr),
+        OUTPUT_HANDLE *outHandle,    // //NOSONAR (Use of Fledge API)
+        OUTPUT_STREAM output) :      // //NOSONAR (Use of Fledge API)
                 FledgeFilter(filterName, filterConfig, outHandle, output) {
     handleConfig(filterConfig);
 }
@@ -142,38 +127,19 @@ Pivot2OpcuaFilter::getIntStVal(Datapoints* dict, const string& context) {
  * @param dict The object under "PIVOTTX.GTxx"
  */
 Pivot2OpcuaFilter::CommonMeasurePivot::
-CommonMeasurePivot(Datapoints* dict) :
-m_readFields(0),
-m_pivotType("unknown"),
-m_Confirmation(false),
-m_Cause(0),
-m_ComingFrom(""),
-m_Identifier(""),
-m_TmOrg(""),
-m_TmValidity(""),
-m_MagVal(nullptr),
-m_Qualified(nullptr) {
-    using FieldDecoder = void (*) (CommonMeasurePivot*, DatapointValue&, const string& name);
-    using decoder_map_t = std::map<std::string, FieldDecoder>;
-
+CommonMeasurePivot(const Datapoints* dict) :
+m_readFields(0),            // //NOSONAR (FP)
+m_pivotType("unknown"),     // //NOSONAR (FP)
+m_Confirmation(false),      // //NOSONAR (FP)
+m_Cause(0),                 // //NOSONAR (FP)
+m_ComingFrom(""),           // //NOSONAR (FP)
+m_Identifier(""),           // //NOSONAR (FP)
+m_TmOrg(""),                // //NOSONAR (FP)
+m_TmValidity(""),           // //NOSONAR (FP)
+m_MagVal(nullptr),          // //NOSONAR (FP)
+m_Qualified(nullptr) {      // //NOSONAR (FP)
     static const FieldDecoder notFound(nullptr);
 
-    static const decoder_map_t decoder_map = {
-            {"Confirmation", decodeConfirmation},
-            {"Cause", decodeCause},
-            {"ComingFrom", decodeComingFrom},
-            {"Identifier", decodeIdentifier},
-            {"TmOrg", decodeTmOrg},
-            {"TmValidity", decodeTmValidity},
-            {"MvTyp", decodeMagVal},
-            {"SpsTyp", decodeSpsVal},
-            {"DpsTyp", decodeDpsVal},
-            {"Beh", ignoreField},
-            {"ChgValCnt", ignoreField},
-            {"NormalSrc", ignoreField},
-            {"NormalVal", ignoreField},
-            {"Origin", ignoreField}
-    };
     for (Datapoint* dp : *dict) {
         const string name(dp->getName());
         DatapointValue& data = dp->getData();
@@ -205,6 +171,7 @@ ignoreField(CommonMeasurePivot* pivot, DatapointValue& data, const string& name)
 void
 Pivot2OpcuaFilter::CommonMeasurePivot::
 decodeConfirmation(CommonMeasurePivot* pivot, DatapointValue& data, const string& name) {
+    (void)name;
     if (data.getType() == DatapointValue::T_DP_DICT) {
         Datapoints* gtElems(data.getDpVec());
         pivot->m_Confirmation = getIntStVal(gtElems, "confirmation");
@@ -217,7 +184,7 @@ Pivot2OpcuaFilter::CommonMeasurePivot::
 decodeCause(CommonMeasurePivot* pivot, DatapointValue& data, const string& name) {
     if (data.getType() == DatapointValue::T_DP_DICT) {
         Datapoints* gtElems(data.getDpVec());
-        pivot->m_Cause = getIntStVal(gtElems, "cause");
+        pivot->m_Cause = static_cast<int>(getIntStVal(gtElems, "cause"));
         pivot->m_readFields |= FieldMask_cot;
     } else {
         throw InvalidPivotContent(string("Missing Cause.stVal in ") + name.c_str());
@@ -326,9 +293,9 @@ decodeDpsVal(CommonMeasurePivot* pivot, DatapointValue& data, const string& name
 
 void
 Pivot2OpcuaFilter::CommonMeasurePivot::
-updateReading(const DataDictionnary_Ptr& dictPtr, Reading* reading)const {
+updateReading(const DataDictionnary* dictPtr, Reading* reading)const {
     // Search for initial data in "exchanged_data" section
-    if (dictPtr.get() == nullptr || m_Qualified == nullptr) return;
+    if (dictPtr == nullptr || m_Qualified == nullptr) return;
     if (m_Identifier.empty()) {
         LOG_WARNING("Mandatory field 'Identifier' from PIVOT is missing ");
         return;
@@ -365,7 +332,7 @@ updateReading(const DataDictionnary_Ptr& dictPtr, Reading* reading)const {
     reading->removeAllDatapoints();
 
     // Build content of "data_object" Object
-    Datapoints* dp_vect = new Datapoints;
+    Datapoints* dp_vect = new Datapoints;    // //NOSONAR (Use of Fledge API)
 
     dp_vect->push_back(createIntDatapointValue("do_cot", m_Cause));
     dp_vect->push_back(createIntDatapointValue("do_confirmation", m_Confirmation));
@@ -381,7 +348,7 @@ updateReading(const DataDictionnary_Ptr& dictPtr, Reading* reading)const {
     dp_vect->push_back(createStringDatapointValue("do_ts_validity", m_TmValidity));
     dp_vect->push_back(dp_value);
     DatapointValue dpVal(dp_vect, true);
-    Datapoint* dp(new Datapoint("data_object", dpVal));
+    Datapoint* dp(new Datapoint("data_object", dpVal));  // //NOSONAR (Use of Fledge API)
     LOG_INFO("Successfully converted PIVOT ID='%s' from type '%s' to OPCUA '%s'",
             m_Identifier.c_str(), m_pivotType.c_str(), element.m_opcType.c_str());
     reading->addDatapoint(dp);
@@ -420,19 +387,19 @@ inline string getDatapointValueStrVal(const DatapointValue& data, const string& 
 }   // namespace
 
 Pivot2OpcuaFilter::PivotQuality::
-PivotQuality(Datapoints* dict):
-m_test(false),
-m_operatorBlocked(false),
-m_Validity(""),
-m_Source(""),
-m_Detail_badRef(false),
-m_Detail_failure(false),
-m_Detail_inconsistent(false),
-m_Detail_innacurate(false),
-m_Detail_oldData(false),
-m_Detail_oscillatory(false),
-m_Detail_outOfRange(false),
-m_Detail_overflow(false) {
+PivotQuality(const Datapoints* dict):
+m_test(false),                         // //NOSONAR (FP)
+m_operatorBlocked(false),              // //NOSONAR (FP)
+m_Validity(""),                        // //NOSONAR (FP)
+m_Source(""),                          // //NOSONAR (FP)
+m_Detail_badRef(false),                // //NOSONAR (FP)
+m_Detail_failure(false),               // //NOSONAR (FP)
+m_Detail_inconsistent(false),          // //NOSONAR (FP)
+m_Detail_innacurate(false),            // //NOSONAR (FP)
+m_Detail_oldData(false),               // //NOSONAR (FP)
+m_Detail_oscillatory(false),           // //NOSONAR (FP)
+m_Detail_outOfRange(false),            // //NOSONAR (FP)
+m_Detail_overflow(false) {             // //NOSONAR (FP)
     for (Datapoint* dp : *dict) {
         const string name(dp->getName());
         DatapointValue& data = dp->getData();
@@ -443,7 +410,7 @@ m_Detail_overflow(false) {
                 const string qName(qDp->getName());
                 DatapointValue& qData = qDp->getData();
 
-                if (qName == "badReference") {
+                if (qName == "badReference") {  // //NOSONAR
                     m_Detail_badRef = getDatapointValueIntVal(qData, "badReference");
                 } else if (qName == "failure") {
                     m_Detail_failure = getDatapointValueIntVal(qData, "failure");
@@ -493,13 +460,13 @@ Pivot2OpcuaFilter::PivotQuality::toDetails(void)const {
 }
 
 Pivot2OpcuaFilter::PivotTimestamp::
-PivotTimestamp(Datapoints* dict) :
-time_frac(0),
-time_nbSec(0),
-clockFailure(0),
-clockNotSynch(0),
-leapSecondKnown(0),
-timeAccuracy(0) {
+PivotTimestamp(const Datapoints* dict) :
+time_frac(0),                   // //NOSONAR (FP)
+time_nbSec(0),                  // //NOSONAR (FP)
+clockFailure(0),                // //NOSONAR (FP)
+clockNotSynch(0),               // //NOSONAR (FP)
+leapSecondKnown(0),             // //NOSONAR (FP)
+timeAccuracy(0) {               // //NOSONAR (FP)
     for (Datapoint* dp : *dict) {
         const string name(dp->getName());
         DatapointValue& data = dp->getData();
@@ -511,7 +478,7 @@ timeAccuracy(0) {
                 DatapointValue& qData = qDp->getData();
                 const DatapointValue::dataTagType qType(qData.getType());
 
-                if (qName == "clockFailure") {
+                if (qName == "clockFailure") {  // //NOSONAR
                     clockFailure = getDatapointValueIntVal(qData, "clockFailure");
                 } else if (qName == "clockNotSynchronized") {
                     clockNotSynch = getDatapointValueIntVal(qData, "clockNotSynchronized");
@@ -660,7 +627,7 @@ Pivot2OpcuaFilter::pivot2opcua(Reading* readingRef) {
 
             try {
                 CommonMeasurePivot pivot(gtData.getDpVec());
-                pivot.updateReading(m_dictionnary, readingRef);
+                pivot.updateReading(m_dictionnary.get(), readingRef);
                 return;
             } catch (const InvalidPivotContent& e) {
                 LOG_WARNING("Failed to extract PIVOT content from '%s.%s'",

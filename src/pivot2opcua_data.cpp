@@ -52,7 +52,7 @@ const Value& getObject(const Value& value,
 }
 
 /**************************************************************************/
-const Value::ConstArray getArray(const Value& value,
+Value::ConstArray getArray(const Value& value,
         const char* section, const string& context) {
     ASSERT(value.HasMember(section), "Missing ARRAY '%s' in '%s'",
             section, context.c_str());
@@ -128,9 +128,9 @@ DataDictionnary(const string& jsonExData) {
                 LOG_INFO("Add Pivot id '%s' : {'%s', '%s', '%s'}",
                         pivot_id.c_str(),
                         pivot_type.c_str(), data.address.c_str(), data.typeId.c_str());
-                m_map.emplace(std::make_pair(pivot_id, PivotElement(pivot_type, data.address, data.typeId)));
+                m_map.emplace(std::make_pair(pivot_id, PivotElement(pivot_type, data.typeId)));
             }
-            catch (const ExchangedDataC::NotAnS2opcInstance&) {
+            catch (const ExchangedDataC::NotAnS2opcInstance&) {     // //NOSONAR
                 // Just ignore other protocols
             }
         }

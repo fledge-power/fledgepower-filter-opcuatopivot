@@ -16,8 +16,31 @@
 
 // Project headers
 #include "pivot2opcua_common.h"
+#include "pivot2opcua_filter.h"
 
-//SOP2C headers
+/** Note
+ * This file contains all maps used in the filter code. They are separated from the
+ * This remaining of the code because GCOV and SONAR tools see uncovered lines to these declarations
+ * This file only contains those maps and is excluded from coverage measures
+ */
+
+const Pivot2OpcuaFilter::CommonMeasurePivot::decoder_map_t
+Pivot2OpcuaFilter::CommonMeasurePivot::decoder_map = {
+        {"Confirmation", &decodeConfirmation},
+        {"Cause", &decodeCause},
+        {"ComingFrom", &decodeComingFrom},
+        {"Identifier", &decodeIdentifier},
+        {"TmOrg", &decodeTmOrg},
+        {"TmValidity", &decodeTmValidity},
+        {"MvTyp", &decodeMagVal},
+        {"SpsTyp", &decodeSpsVal},
+        {"DpsTyp", &decodeDpsVal},
+        {"Beh", &ignoreField},
+        {"ChgValCnt", &ignoreField},
+        {"NormalSrc", &ignoreField},
+        {"NormalVal", &ignoreField},
+        {"Origin", &ignoreField}
+};
 
 namespace Rules {
 /**************************************************************************/
