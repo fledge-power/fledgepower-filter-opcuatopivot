@@ -54,17 +54,34 @@ jobs:
           echo "$HOME/.sonar/build-wrapper-linux-x86" >> $GITHUB_PATH 
       - name: Download and install Fledge
         env:
+          FLEDGE_SRC: "$GITHUB_WORKSPACE/../fledge" 
           FLEDGE_REPO_URL: "https://github.com/fledge-iot/fledge/archive/refs/tags/v2.0.0.zip" 
         run: |
+          export FLEDGE_SRC=${{ env.FLEDGE_SRC }}
+          export FLEDGE_INSTALL=/usr/local/fledge
+          export FLEDGE_ROOT=${{ env.FLEDGE_SRC }}
+          export DESTDIR=$FLEDGE_INSTALL
+          export CMAKE_LIBRARY_PATH=$DESTDIR/lib
           cd $GITHUB_WORKSPACE/..
           curl -sSLo fledge-pkg.zip ${{ env.FLEDGE_REPO_URL }}
           unzip -o fledge-pkg.zip -d .
           mv fledge-2.0.0 fledge
           cd fledge
+          # Patch requirements
+          sed -i 's/\bpython-dev\b/python2-dev/' requirements.sh 
           sudo apt-get update
           sudo apt-get install libcurl4-openssl-dev
           sudo ./requirements.sh
-          sudo make install -j8
+          # Only build required modules
+          sudo mkdir -p $FLEDGE_INSTALL
+          cmake .
+          echo 'echo "Building $1" && sudo make install -j8 -C "$1" && echo "Build $1 OK!"' > build_sub.sh
+          chmod +x build_sub.sh
+          ./build_sub.sh C/common
+          ./build_sub.sh C/services/common
+          ./build_sub.sh C/plugins/common
+          ./build_sub.sh C/plugins/filter/common
+          ./build_sub.sh C/plugins/utils
           sudo mkdir -p /usr/include/fledge/rapidjson/
           find C/common/ -name '*.h' -exec sudo cp -prv '{}' '/usr/include/fledge/' ';'
           find C/plugins/ -name '*.h' -exec sudo cp -prv '{}' '/usr/include/fledge/' ';'
