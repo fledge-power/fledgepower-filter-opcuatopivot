@@ -124,7 +124,7 @@ Pivot2OpcuaFilter::getIntStVal(Datapoints* dict, const string& context) {
 }
 
 /***
- * @param dict The object under "PIVOTTX.GTxx"
+ * @param dict The object under "PIVOT.GTxx"
  */
 Pivot2OpcuaFilter::CommonMeasurePivot::
 CommonMeasurePivot(const Datapoints* dict) :
@@ -584,21 +584,22 @@ createData(const std::string& typeName) {
 /**
  * Convert a Reading from PIVOT to OPCUA.
  * @param readingRef The Reading.
- * @return a new allocated reading or NULL if invalid reading is found
+ *      It is expected as an array of 1 Datapoint, eah of them containing:
+ *        - PIVOT.GTIx....
+ *      If the reading content is compatible, it is replaced by the equivalent OPC data
+ *      ("data_object")
+ *      Only One datapoint is translated.
  */
 void
 Pivot2OpcuaFilter::pivot2opcua(Reading* readingRef) {
     Datapoints& readDp(readingRef->getReadingData());
     for (Datapoint* dp : readDp) {
-        // Find the class constructor depending on pivot name. (e.g. "PIVOTTS")
+        // Expecting "PIVOT" in first level
         const string name(dp->getName());
-        static const string notFound;
-        const string& gtixName(Rules::find_T(Rules::pivotTx2GTIx, name, notFound));
-        if (gtixName.empty()) {
+        if (name != "PIVOT") {
             LOG_WARNING("Unknown Reading Type '%s'", name.c_str());
             continue;
         }
-
         // Check sub content is an object
         DatapointValue& data = dp->getData();
         if (data.getType() != DatapointValue::T_DP_DICT) {
@@ -607,17 +608,19 @@ Pivot2OpcuaFilter::pivot2opcua(Reading* readingRef) {
         }
 
         Datapoints* gtElems(data.getDpVec());
-//        LOG_DEBUG("Known type: :%s/%s (%d items)",
-//                name.c_str(), gtixName.c_str(), gtElems->size());
         for (Datapoint* gtElem : *gtElems) {
             const string gtName(gtElem->getName());
-            if (gtName != gtixName) {
-                LOG_WARNING("invalid content for Datapoint '%s'. expecting '%s', found '%s'",
-                        name.c_str(), gtName.c_str(), gtixName.c_str());
+            // Check if the GTxx is known
+
+            Str2Vect_map_t::const_iterator gtIter(Rules::gtix2pivotTypeMap.find(gtName));
+
+            if (gtIter == Rules::gtix2pivotTypeMap.end()) {
+                LOG_WARNING("invalid content for Datapoint '%s'. found unexpected '%s'",
+                        name.c_str(), gtName.c_str());
                 continue;
             }
 
-            // Found matching (e.g. "PIVOTTM.GTIM")
+            // Found matching (e.g. "PIVOT.GTIM")
             DatapointValue& gtData = gtElem->getData();
             if (gtData.getType() != DatapointValue::T_DP_DICT) {
                 LOG_WARNING("invalid content for Datapoint '%s'. expecting T_DP_DICT",

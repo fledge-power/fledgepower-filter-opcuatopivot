@@ -419,7 +419,7 @@ static const char * const JsonPlugConfOK =
 
 static const char * const JsonPivotMvf =
     QUOTE({
-    "PIVOTTM" :{
+    "PIVOT" :{
         "GTIM": {
             "Cause": {"stVal": 1},
             "Confirmation": {"stVal": true},
@@ -438,7 +438,7 @@ static const char * const JsonPivotMvf =
 
 static const char * const JsonPivotMvi =
         QUOTE({
-    "PIVOTTM" :{
+    "PIVOT" :{
         "GTIM": {
             "Cause": {"stVal": 4},
             "Confirmation": {"stVal": false},
@@ -457,7 +457,7 @@ static const char * const JsonPivotMvi =
 
 static const char * const JsonPivotSps =
         QUOTE({
-    "PIVOTTS" :{
+    "PIVOT" :{
         "GTIS": {
             "Cause": {"stVal": 4},
             "Confirmation": {"stVal": false},
@@ -476,7 +476,7 @@ static const char * const JsonPivotSps =
 
 static const char * const JsonPivotDps =
         QUOTE({
-    "PIVOTTS" :{
+    "PIVOT" :{
         "GTIS": {
             "Cause": {"stVal": 4},
             "Confirmation": {"stVal": false},
@@ -495,7 +495,7 @@ static const char * const JsonPivotDps =
 
 static const char * const JsonPivotDps2 =
         QUOTE({
-    "PIVOTTS" :{
+    "PIVOT" :{
         "GTIS": {
             "Origin": {"stVal": 4},
             "ChgValCnt": {"stVal": 4},
