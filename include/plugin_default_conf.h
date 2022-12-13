@@ -16,7 +16,7 @@
 // Fledge includes
 #include "plugin_api.h"
 
-#define FILTER_NAME "pivot2opcua"   // NOLINT //NOSONAR
+#define FILTER_NAME "pivottoopcua"   // NOLINT //NOSONAR
 
 // PLUGIN DEFAULT EXCHANGED DATA CONF
 #define EXCHANGED_DATA_DEF                   \
@@ -25,11 +25,11 @@
             "name" : "opcua",         \
             "version" : "1.0",               \
             "datapoints" : [                  \
-                {                            \
-                    "label":"LabelSpsTyp",   \
-                    "pivot_id" : "S114562128", \
-                    "pivot_type" : "SpsTyp",        \
-                    "protocols" :[ \
+                {\
+                   "label":"labelSPS", \
+                   "pivot_id":"pivotSPS", \
+                   "pivot_type":"SpsTyp", \
+                   "protocols":[\
                       {\
                          "name":"iec104", \
                          "address":"18325-6468171", \
@@ -38,60 +38,63 @@
                       }, \
                       {\
                          "name":"opcua", \
-                         "address":"S_1145_6_21_28", \
+                         "address":"sps", \
                          "typeid":"opcua_sps"\
                       }\
-                    ] \
-                },  \
-                {                            \
-                    "label":"LabelDpsTyp",   \
-                    "pivot_id" : "S114562127", \
-                    "pivot_type" : "SpsTyp",        \
-                    "protocols" :[ \
+                   ]\
+                }\
+                , \
+                {\
+                   "label":"labelDPS", \
+                   "pivot_id":"pivotDPS", \
+                   "pivot_type":"DpsTyp", \
+                   "protocols":[\
                       {\
                          "name":"opcua", \
-                         "address":"S_1145_6_21_27", \
+                         "address":"dps", \
                          "typeid":"opcua_dps"\
                       }\
-                    ] \
-                },  \
-                {                            \
-                    "label":"LabelMvaTyp",   \
-                    "pivot_id" : "S114562129", \
-                    "pivot_type" : "MvTyp",        \
-                    "protocols" :[ \
+                   ]\
+                }\
+                , \
+                {\
+                   "label":"labelMVI", \
+                   "pivot_id":"pivotMVI", \
+                   "pivot_type":"MvTyp", \
+                   "protocols":[\
                       {\
                          "name":"opcua", \
-                         "address":"S_1145_6_21_29", \
-                         "typeid":"opcua_mva"\
+                         "address":"mvi", \
+                         "typeid":"opcua_mvi"\
                       }\
-                    ] \
-                },  \
-                {                            \
-                    "label":"LabelMvfTyp",   \
-                    "pivot_id" : "S114562130", \
-                    "pivot_type" : "MvTyp",        \
-                    "protocols" :[ \
+                   ]\
+                }\
+                , \
+                {\
+                   "label":"labelMVF", \
+                   "pivot_id":"pivotMVF", \
+                   "pivot_type":"MvTyp", \
+                   "protocols":[\
                       {\
                          "name":"opcua", \
-                         "address":"S_1145_6_21_30", \
+                         "address":"mvf", \
                          "typeid":"opcua_mvf"\
                       }\
-                    ] \
-                },  \
-                {                            \
-                    "label":"LabelMvfTyp2",   \
-                    "pivot_id" : "S114562131", \
-                    "pivot_type" : "MvTyp",        \
-                    "protocols" :[ \
+                   ]\
+                }\
+                , \
+                {\
+                   "label":"labelDPC", \
+                   "pivot_id":"pivotDPC", \
+                   "pivot_type":"DpcTyp", \
+                   "protocols":[\
                       {\
                          "name":"opcua", \
-                         "address":"S_1145_6_21_31", \
-                         "typeid":"opcua_mvf"\
-                         "mapping_rule":"PtoMVF_round"\
+                         "address":"dpc", \
+                         "typeid":"opcua_dpc"\
                       }\
-                    ] \
-                }  \
+                   ]\
+                }\
             ]  \
         }  \
     })

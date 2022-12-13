@@ -1043,4 +1043,5 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterApi) {
         DATA_PASSES;
     }
     plugin_shutdown(plugin);
+    plugin_shutdown(nullptr);
 }

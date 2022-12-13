@@ -97,8 +97,9 @@ DataDictionnary(const string& jsonExData) {
     rapidjson::Document doc;
     doc.Parse(jsonExData.c_str());
     ASSERT(!doc.HasParseError(),
-            "Malformed JSON (section '%s', index = %u)",
-            JSON_EXCHANGED_DATA, doc.GetErrorOffset());
+            "Malformed JSON (section '%s', index = %u, near %50s)",
+            JSON_EXCHANGED_DATA, doc.GetErrorOffset(),
+            jsonExData.c_str() + doc.GetErrorOffset());
 
     // Parse "exchanged_data" section
     const Value& exData(::getObject(doc, JSON_EXCHANGED_DATA, JSON_EXCHANGED_DATA));
