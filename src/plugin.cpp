@@ -31,7 +31,7 @@ static const char * const default_config = QUOTE({
                        "description": "A switch that can be used to enable or disable execution of the log filter.",
                        "type": "boolean",
                        "displayName": "Enabled",
-                       "default": "false"
+                       "default": "true"
                        },
                 "exchanged_data": {
                         "description" : "exchanged data list",
