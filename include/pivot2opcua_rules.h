@@ -31,9 +31,6 @@ using std::string;
 /**************************************************************************/
 /*             TRANSLATION RULES                                          */
 /**************************************************************************/
-/// In pivot object, link between Reading Datapoint object and sub object name
-extern const StrStrMap_t pivotTx2GTIx;
-
 /// In pivot object, name of the sub-section, depending on GTIx type
 extern const Str2Vect_map_t gtix2pivotTypeMap;
 

@@ -27,7 +27,7 @@ TEST(Pivot2Opcua_Plugin, PluginInfo) {
     TITLE("*** TEST Info PluginInfo");
 
     PLUGIN_INFORMATION *info = plugin_info();
-    ASSERT_STREQ(info->name, "pivot2opcua");
+    ASSERT_STREQ(info->name, "pivottoopcua");
     ASSERT_STREQ(info->type, PLUGIN_TYPE_FILTER);
 }
 

@@ -46,10 +46,6 @@ namespace Rules {
 /**************************************************************************/
 /*             TRANSLATION RULES                                          */
 /**************************************************************************/
-const StrStrMap_t pivotTx2GTIx {
-    {"PIVOTTM", "GTIM"},
-    {"PIVOTTS", "GTIS"}
-};  // pivotTx2GTIx
 
 const Str2Vect_map_t gtix2pivotTypeMap {
     {"GTIM", {"MvTyp"}},

@@ -18,6 +18,7 @@
 #include "main_test_configs.h"
 #include "plugin_api.h"
 #include "filter.h"
+#include "asset_tracking.h"
 
 using namespace std;
 using namespace rapidjson;
@@ -158,7 +159,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterTM) {
 
     Pivot2OpcuaFilter filter(FILTER_PARAMS);
 
-    // Send a reading (PIVOTTM)
+    // Send a reading (PIVOT/GTIM)
     TRACE("  * Create reading()");
     ReadingSet rSet;
     rSet.append(JsonToReading(JsonPivotMvf, "code1"));
@@ -323,7 +324,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterSps) {
 
     Pivot2OpcuaFilter filter(FILTER_PARAMS);
 
-    // Send a reading (PIVOTTS)
+    // Send a reading (PIVOT/GTIS)
     TRACE("  * Create reading()");
     ReadingSet rSet;
     rSet.append(JsonToReading(JsonPivotSps, "testSps"));
@@ -368,7 +369,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterDps) {
 
     Pivot2OpcuaFilter filter(FILTER_PARAMS);
 
-    // Send a reading (PIVOTTS)
+    // Send a reading (PIVOT/GTIS)
     TRACE("  * Create reading()");
 
     ReadingSet rSet;
@@ -796,7 +797,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterMissFields) {
     // Unknown-Pivot-Id
     {
         const std::string testStr(replace_in_string(JsonPivotMvf,
-                "(\"Identifier\") *: \"*pivotMVF\"", "$1 : \"pivotTurtle\""));
+                "(\"Identifier\") *: \"*pivotMVF\"", "$1 : \"pivotMVX\""));
         INGEST(rSet, testStr, "Unknown-Pivot-Id");
 
         DATA_FAILS;
@@ -851,7 +852,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterMissFields) {
     {
         const std::string testStr =
                 QUOTE({
-                "PIVOTTM" :{
+                "PIVOT" :{
                     "GTIM": {
                         "Cause": {"stVal": 1},
                         "Confirmation": {"stVal": true},
@@ -872,7 +873,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterMissFields) {
     {
         const std::string testStr =
                 QUOTE({
-            "PIVOTTS" :{
+            "PIVOT" :{
                 "GTIS": {
                     "Cause": {"stVal": 4},
                     "Confirmation": {"stVal": false},
@@ -893,7 +894,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterMissFields) {
     {
         const std::string testStr =
                 QUOTE({
-            "PIVOTTS" :{
+            "PIVOT" :{
                 "GTIS": {
                     "Cause": {"stVal": 4},
                     "Confirmation": {"stVal": false},
@@ -955,17 +956,17 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterMissFields) {
         DATA_FAILS;
     }
 
-    // SPS-Invalid-PIVOTTS
+    // SPS-Invalid-PIVOT
     {
-        const std::string testStr = QUOTE({ "PIVOTTS" :33 });
-        INGEST(rSet, testStr, "SPS-Invalid-PIVOTTS");
+        const std::string testStr = QUOTE({ "PIVOT" :33 });
+        INGEST(rSet, testStr, "SPS-Invalid-PIVOT");
 
         DATA_FAILS;
     }
 
     // SPS-Invalid-GTIS
     {
-        const std::string testStr = QUOTE({ "PIVOTTS" :{ "GTIS": 33 }});
+        const std::string testStr = QUOTE({ "PIVOT" :{ "GTIS": 33 }});
         INGEST(rSet, testStr, "SPS-Invalid-GTIS");
 
         DATA_FAILS;
@@ -974,7 +975,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterMissFields) {
     // SPS-Mismatch-GTIS
     {
         const std::string testStr(replace_in_string(JsonPivotDps,
-                "(\"GTIS\")", "\"GTIM\""));
+                "(\"GTIS\")", "\"GTISM\""));
         INGEST(rSet, testStr, "SPS-Mismatch-GTIS");
 
         DATA_FAILS;
@@ -1020,7 +1021,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterApi) {
         DATA_FAILS;
     }
 
-    // Rre-Enable filter
+    // Re-Enable filter
     {
         string conf(QUOTE({ "enable" : { "description" : "", "value" : "true", "type" : "string"}}));
         plugin_reconfigure(plugin, conf);
@@ -1029,5 +1030,18 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterApi) {
 
         DATA_PASSES;
     }
+
+    // Cover Asset tracking
+    {
+        ManagementClient client("stub", 3333);
+        AssetTracker tracker(&client, "FILTER OPC");
+        string conf(QUOTE({ "enable" : { "description" : "", "value" : "true", "type" : "string"}}));
+        plugin_reconfigure(plugin, conf);
+        const std::string testStr(JsonPivotMvf);
+        INGEST(rSet, testStr, "Ref test");
+
+        DATA_PASSES;
+    }
     plugin_shutdown(plugin);
+    plugin_shutdown(nullptr);
 }
