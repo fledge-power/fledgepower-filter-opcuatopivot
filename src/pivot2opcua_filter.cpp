@@ -194,12 +194,11 @@ decodeCause(CommonMeasurePivot* pivot, DatapointValue& data, const string& name)
 void
 Pivot2OpcuaFilter::CommonMeasurePivot::
 decodeComingFrom(CommonMeasurePivot* pivot, DatapointValue& data, const string& name) {
-    if (data.getType() == DatapointValue::T_DP_DICT) {
-        Datapoints* gtElems(data.getDpVec());
-        pivot->m_ComingFrom = getStringStVal(gtElems, "comingFrom");
+    if (data.getType() == DatapointValue::T_STRING) {
+        pivot->m_ComingFrom = data.toStringValue();
         pivot->m_readFields |= FieldMask_cmf;
     } else {
-        throw InvalidPivotContent(string("Missing or invalid Cause.stVal in ") + name.c_str());
+        throw InvalidPivotContent(string("Missing or invalid ComingFrom in ") + name.c_str());
     }
 }
 
