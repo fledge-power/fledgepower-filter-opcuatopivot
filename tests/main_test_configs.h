@@ -423,7 +423,7 @@ static const char * const JsonPivotMvf =
         "GTIM": {
             "Cause": {"stVal": 1},
             "Confirmation": {"stVal": true},
-            "ComingFrom":  {"stVal": "iec104"},
+            "ComingFrom":  "iec104",
             "Identifier":  "pivotMVF",
             "TmOrg" :  {"stVal":"genuine"},
             "TmValidity" :  {"stVal":"questionable"},
@@ -442,7 +442,7 @@ static const char * const JsonPivotMvi =
         "GTIM": {
             "Cause": {"stVal": 4},
             "Confirmation": {"stVal": false},
-            "ComingFrom":  {"stVal": "opcua"},
+            "ComingFrom":  "opcua",
             "Identifier":  "pivotMVI",
             "TmOrg" :  {"stVal":"substituted"},
             "TmValidity" :  {"stVal":"good"},
@@ -461,7 +461,7 @@ static const char * const JsonPivotSps =
         "GTIS": {
             "Cause": {"stVal": 4},
             "Confirmation": {"stVal": false},
-            "ComingFrom":  {"stVal": "opcua"},
+            "ComingFrom": "opcua",
             "Identifier":  "pivotSPS",
             "TmOrg" :  {"stVal":"substituted"},
             "TmValidity" :  {"stVal":"good"},
@@ -480,7 +480,7 @@ static const char * const JsonPivotDps =
         "GTIS": {
             "Cause": {"stVal": 4},
             "Confirmation": {"stVal": false},
-            "ComingFrom":  {"stVal": "opcua"},
+            "ComingFrom": "opcua",
             "Identifier":  "pivotDPS",
             "TmOrg" :  {"stVal":"substituted"},
             "TmValidity" :  {"stVal":"good"},
@@ -503,7 +503,7 @@ static const char * const JsonPivotDps2 =
             "NormalVal": {"stVal": 4},
             "Cause": {"stVal": 4},
             "Confirmation": {"stVal": false},
-            "ComingFrom":  {"stVal": "opcua"},
+            "ComingFrom": "opcua",
             "Identifier":  "pivotDPS",
             "TmOrg" :  {"stVal":"substituted"},
             "TmValidity" :  {"stVal":"good"},
