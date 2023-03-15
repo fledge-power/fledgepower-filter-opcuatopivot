@@ -292,6 +292,21 @@ decodeDpsVal(CommonMeasurePivot* pivot, DatapointValue& data, const string& name
 
 void
 Pivot2OpcuaFilter::CommonMeasurePivot::
+logMissingMandatoryFields(const std::string& pivotName, uint32_t fields) {
+    const uint32_t missing(Mandatory_fields & (~fields));
+    if (missing & FieldMask_cot) {
+        LOG_WARNING("Mandatory field 'Cause' missing for PIVOT ID='%s'", pivotName.c_str());
+    }
+    if (missing & FieldMask_cmf) {
+        LOG_WARNING("Mandatory field 'ComingFrom' missing for PIVOT ID='%s'", pivotName.c_str());
+    }
+    if (missing & FieldMask_vqu) {
+        LOG_WARNING("Mandatory field 'XxTyp.q.Validity' missing for PIVOT ID='%s'", pivotName.c_str());
+    }
+}
+
+void
+Pivot2OpcuaFilter::CommonMeasurePivot::
 updateReading(const DataDictionnary* dictPtr, Reading* reading)const {
     // Search for initial data in "exchanged_data" section
     if (dictPtr == nullptr || m_Qualified == nullptr) return;
@@ -303,6 +318,7 @@ updateReading(const DataDictionnary* dictPtr, Reading* reading)const {
     if ((m_readFields & Mandatory_fields) != Mandatory_fields) {
         LOG_WARNING("Mandatory fields from PIVOT are missing for PIVOT ID='%s' (Missing mask = 0x%04X)",
                 m_Identifier.c_str(), Mandatory_fields & (~m_readFields));
+        logMissingMandatoryFields(m_Identifier.c_str(), m_readFields);
         return;
     }
 

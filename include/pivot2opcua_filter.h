@@ -200,6 +200,8 @@ class Pivot2OpcuaFilter : public FledgeFilter {
                 FieldMask_cot | FieldMask_cmf | FieldMask_idt | FieldMask_typ |
                 FieldMask_val | FieldMask_tmo | FieldMask_tmv | FieldMask_vqu;
 
+        static void logMissingMandatoryFields(const std::string& pivotName, uint32_t fields);
+
         uint32_t        m_readFields;   // A mask to  FieldMask_XXX
         string          m_pivotType;
         bool            m_Confirmation;
