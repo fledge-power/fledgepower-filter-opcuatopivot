@@ -198,7 +198,7 @@ class Pivot2OpcuaFilter : public FledgeFilter {
         static const uint32_t FieldMask_vqu = 0x0400;   // value quality
         static const uint32_t Mandatory_fields =
                 FieldMask_cot | FieldMask_cmf | FieldMask_idt | FieldMask_typ |
-                FieldMask_val | FieldMask_tmo | FieldMask_tmv | FieldMask_vqu;
+                FieldMask_val | FieldMask_vqu;
 
         static void logMissingMandatoryFields(const std::string& pivotName, uint32_t fields);
 
