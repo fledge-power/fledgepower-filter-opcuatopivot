@@ -35,17 +35,11 @@ static const char * const default_config = QUOTE({
                        },
                 "exchanged_data": {
                         "description" : "exchanged data list",
-                        "type" : "string",
+                        "type" : "JSON",
                         "displayName" : "Exchanged data list",
                         "order" : "3",
                         "default" : EXCHANGED_DATA_DEF
-                       },
-                "match" : {
-                        "description" : "An optional regular expression to match in the asset name.",
-                        "type": "string",
-                        "default": "",
-                        "order": "1",
-                        "displayName": "Asset filter"}
+                       }
                 });
 
 using std::string;
