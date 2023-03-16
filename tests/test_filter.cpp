@@ -683,16 +683,25 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterMissFields) {
                 "\"TmOrg\"", "\"__TmOrg__\""));
         INGEST(rSet, testStr, "testMiss TmOrg");
 
-        DATA_FAILS;
+        DATA_PASSES;
     }
 
-    // "TmValidity"
+    // "TmValidity" (SPS)
     {
-        const std::string testStr(replace_in_string(JsonPivotDps,
+        const std::string testStr(replace_in_string(JsonPivotSps,
                 "\"TmValidity\"", "\"__TmValidity__\""));
-        INGEST(rSet, testStr, "testMiss TmValidity");
+        INGEST(rSet, testStr, "testMiss TmValidity -SPS");
 
-        DATA_FAILS;
+        DATA_PASSES;
+    }
+
+    // "TmValidity" (MvTyp)
+    {
+        const std::string testStr(replace_in_string(JsonPivotMvf,
+                "\"TmValidity\"", "\"__TmValidity__\""));
+        INGEST(rSet, testStr, "testMiss TmValidity - MVF");
+
+        DATA_PASSES;
     }
 
     // "DpsTyp"
@@ -818,7 +827,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterMissFields) {
                 "(\"stVal\") *: *\"[^\"]*\"", "$1 :33"));
         INGEST(rSet, testStr, "No Str-StVal");
 
-        DATA_FAILS;
+        DATA_PASSES; // Ok since Str-stVal is only used in optional fields
     }
 
     // Bad Confirmation (optional)
@@ -836,7 +845,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterMissFields) {
                 "(\"TmOrg\") *: *[{]*[^}]*[}]", "$1 : 33"));
         INGEST(rSet, testStr, "Bad TmOrg");
 
-        DATA_FAILS;
+        DATA_PASSES; // Optional
     }
 
     // Bad TmValidity
@@ -845,7 +854,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterMissFields) {
                 "(\"TmValidity\") *: *[{]*[^}]*[}]", "$1 : 33"));
         INGEST(rSet, testStr, "Bad TmValidity");
 
-        DATA_FAILS;
+        DATA_PASSES; // Optional
     }
 
     // Bad MvTyp
