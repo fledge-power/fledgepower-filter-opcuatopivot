@@ -82,6 +82,19 @@
                       }\
                    ]\
                 }\
+                ,\
+                {\
+                   "label":"labelINC",\
+                   "pivot_id":"pivotINC",\
+                   "pivot_type":"IncTyp",\
+                   "protocols":[\
+                      {\
+                         "name":"opcua",\
+                         "address":"inc",\
+                         "typeid":"opcua_inc"\
+                      }\
+                   ]\
+                }\
                 , \
                 {\
                    "label":"labelDPC", \

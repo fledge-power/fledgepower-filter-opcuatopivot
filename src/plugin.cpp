@@ -64,6 +64,7 @@ static PLUGIN_INFORMATION info = {
  * Return the information about this plugin
  */
 PLUGIN_INFORMATION *plugin_info() {
+	Logger::getLogger()->debug("plugin_info (" FILTER_NAME ")");
         return &info;
 }
 
@@ -79,6 +80,7 @@ PLUGIN_INFORMATION *plugin_info() {
 PLUGIN_HANDLE plugin_init(ConfigCategory* config,
                           OUTPUT_HANDLE *outHandle,
                           OUTPUT_STREAM output) {
+	Logger::getLogger()->debug("Initializing plugin_init (" FILTER_NAME ")");
     Pivot2OpcuaFilter *filter = new Pivot2OpcuaFilter(FILTER_NAME,  // //NOSONAR (Fledge API)
             *config,
             outHandle,
@@ -95,6 +97,7 @@ PLUGIN_HANDLE plugin_init(ConfigCategory* config,
  */
 void plugin_ingest(PLUGIN_HANDLE handle,
         READINGSET *readingSet) {
+	Logger::getLogger()->debug("plugin_ingest (" FILTER_NAME ")");
     Pivot2OpcuaFilter *filter = static_cast<Pivot2OpcuaFilter*>(handle);
     filter->ingest(readingSet);
 }
@@ -106,6 +109,7 @@ void plugin_ingest(PLUGIN_HANDLE handle,
  * @param newConfig  The updated configuration
  */
 void plugin_reconfigure(PLUGIN_HANDLE handle, const std::string& newConfig) {
+	Logger::getLogger()->info("plugin_reconfigure (" FILTER_NAME ")");
     Pivot2OpcuaFilter *filter = static_cast<Pivot2OpcuaFilter*>(handle);
     filter->reconfigure(newConfig);
 }
@@ -114,6 +118,7 @@ void plugin_reconfigure(PLUGIN_HANDLE handle, const std::string& newConfig) {
  * Call the shutdown method in the plugin
  */
 void plugin_shutdown(PLUGIN_HANDLE handle) {
+	Logger::getLogger()->info("plugin_shutdown (" FILTER_NAME ")");
     Pivot2OpcuaFilter *filter = static_cast<Pivot2OpcuaFilter*>(handle);
     delete filter;  // //NOSONAR (Fledge API)
 }

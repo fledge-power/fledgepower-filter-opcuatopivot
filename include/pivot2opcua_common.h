@@ -53,12 +53,11 @@ using StrStrMap_t = std::map<std::string, std::string>;
 using Str2Vect_map_t = std::map<std::string, const StringVect_t>;
 
 /* HELPER MACROS*/
-static Logger* const logger(Logger::getLogger());  //NOSONAR FLEDGE API
-#define LOG_DEBUG logger->debug
-#define LOG_INFO logger->info
-#define LOG_WARNING logger->warn
-#define LOG_ERROR logger->error
-#define LOG_FATAL logger->fatal
+#define LOG_DEBUG Logger::getLogger()->debug
+#define LOG_INFO Logger::getLogger()->info
+#define LOG_WARNING Logger::getLogger()->warn
+#define LOG_ERROR Logger::getLogger()->error
+#define LOG_FATAL Logger::getLogger()->fatal
 
 #define _PP_XSTR(x) #x
 #define _PP_STR(x) _PP_XSTR(x)
