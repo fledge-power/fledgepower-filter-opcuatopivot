@@ -220,6 +220,7 @@ class Pivot2OpcuaFilter : public FledgeFilter {
     static string getStringStVal(Datapoints* dict, const string& context);
     static int64_t getIntStVal(Datapoints* dict, const string& context);
     void pivot2opcua(Reading* readDp);
+    void opcua2pivot(Reading* readDp);
     void                         handleConfig(const ConfigCategory& config);
     DataDictionnary_Ptr          m_dictionnary;
     std::mutex                   m_configMutex;

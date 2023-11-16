@@ -18,6 +18,7 @@
 
 // Fledge headers
 #include "asset_tracking.h"
+#include "datapoint.h"
 
 // Project headers
 #include "pivot2opcua_common.h"
@@ -33,28 +34,70 @@ using std::mutex;
 using std::unique_ptr;
 
 namespace {
+using Datapoints = vector<Datapoint*>;
 
 static const string stValName = "stVal";   // //NOLINT
 
 /* HELPER FUNCTIONS*/
 
-static inline Datapoint* createStringDatapointValue(const string& name,
-        const string& value) {
-    DatapointValue dpv(value);
-    return new Datapoint(name, dpv);    // //NOSONAR (Use of Fledge API)
+static Datapoint*
+createDatapoint(const string& name)
+{
+    Datapoints* datapoints = new Datapoints;
+    DatapointValue dpv(datapoints, true);
+    return new Datapoint(name, dpv);
 }
 
-static inline Datapoint* createIntDatapointValue(const string& name,
-        const int64_t value) {
-    static_assert(sizeof(long) >= sizeof(uint64_t));  // NOLINT  FLEDGE API
-    DatapointValue dpv(static_cast<long>(value));  // NOLINT  FLEDGE API
-    return new Datapoint(name, dpv);    // //NOSONAR (Use of Fledge API)
+static Datapoint*
+datapointAddElement(Datapoint* dp, const string& name)
+{
+    DatapointValue& dpv = dp->getData();
+    Datapoints* subDatapoints = dpv.getDpVec();
+    Datapoint* element = createDatapoint(name);
+
+    if (element) {
+       subDatapoints->push_back(element);
+    }
+
+    return element;
 }
 
-static inline Datapoint* createFloatDatapointValue(const string& name,
-        const float value) {
+static Datapoint*
+createDpWithValue(const string& name, const long value)
+{
     DatapointValue dpv(value);
-    return new Datapoint(name, dpv);    // //NOSONAR (Use of Fledge API)
+    Datapoint* dp = new Datapoint(name, dpv);
+    return dp;
+}
+
+static Datapoint*
+createDpWithValue(const string& name, const string& value)
+{
+    DatapointValue dpv(value);
+    Datapoint* dp = new Datapoint(name, dpv);
+    return dp;
+}
+
+static Datapoint*
+createDpWithValue(const string& name, const DatapointValue& value)
+{
+    DatapointValue dpv(value);
+    Datapoint* dp = new Datapoint(name, dpv);
+    return dp;
+}
+
+template <class T>
+static Datapoint*
+datapointAddElementWithValue(Datapoint* dp, const string& name, const T value)
+{
+    DatapointValue& dpv = dp->getData();
+    Datapoints* subDatapoints = dpv.getDpVec();
+    Datapoint* element = createDpWithValue(name, value);
+    if (element) {
+       subDatapoints->push_back(element);
+    }
+
+    return element;
 }
 
 }  // namespace
@@ -349,18 +392,18 @@ updateReading(const DataDictionnary* dictPtr, Reading* reading)const {
     // Build content of "data_object" Object
     Datapoints* dp_vect = new Datapoints;    // //NOSONAR (Use of Fledge API)
 
-    dp_vect->push_back(createIntDatapointValue("do_cot", m_Cause));
-    dp_vect->push_back(createIntDatapointValue("do_confirmation", m_Confirmation));
-    dp_vect->push_back(createStringDatapointValue("do_comingfrom", m_ComingFrom));
-    dp_vect->push_back(createStringDatapointValue("do_id", m_Identifier));
-    dp_vect->push_back(createStringDatapointValue("do_type", element.m_opcType));
-    dp_vect->push_back(createIntDatapointValue("do_quality", m_Qualified->quality.toDetails()));
-    dp_vect->push_back(createIntDatapointValue("do_ts_quality", m_Qualified->ts.toDetails()));
-    dp_vect->push_back(createStringDatapointValue("do_value_quality", m_Qualified->quality.validity()));
-    dp_vect->push_back(createStringDatapointValue("do_source", m_Qualified->quality.getSource()));
-    dp_vect->push_back(createIntDatapointValue("do_ts", m_Qualified->ts.nbSec()));
-    dp_vect->push_back(createStringDatapointValue("do_ts_org", m_TmOrg));
-    dp_vect->push_back(createStringDatapointValue("do_ts_validity", m_TmValidity));
+    dp_vect->push_back(createDpWithValue("do_cot", m_Cause));
+    dp_vect->push_back(createDpWithValue("do_confirmation", m_Confirmation));
+    dp_vect->push_back(createDpWithValue("do_comingfrom", m_ComingFrom));
+    dp_vect->push_back(createDpWithValue("do_id", m_Identifier));
+    dp_vect->push_back(createDpWithValue("do_type", element.m_opcType));
+    dp_vect->push_back(createDpWithValue("do_quality", m_Qualified->quality.toDetails()));
+    dp_vect->push_back(createDpWithValue("do_ts_quality", m_Qualified->ts.toDetails()));
+    dp_vect->push_back(createDpWithValue("do_value_quality", m_Qualified->quality.validity()));
+    dp_vect->push_back(createDpWithValue("do_source", m_Qualified->quality.getSource()));
+    dp_vect->push_back(createDpWithValue("do_ts", m_Qualified->ts.nbSec()));
+    dp_vect->push_back(createDpWithValue("do_ts_org", m_TmOrg));
+    dp_vect->push_back(createDpWithValue("do_ts_validity", m_TmValidity));
     dp_vect->push_back(dp_value);
     DatapointValue dpVal(dp_vect, true);
     Datapoint* dp(new Datapoint("data_object", dpVal));  // //NOSONAR (Use of Fledge API)
@@ -554,9 +597,9 @@ Datapoint*
 Pivot2OpcuaFilter::QualifiedMagVal::
 createData(const std::string& typeName) {
     if (typeName == "opcua_mvi" && hasI)
-        return createIntDatapointValue("do_value", iVal);
+        return createDpWithValue("do_value", iVal);
     if  (typeName == "opcua_mvf" && hasF)
-        return createFloatDatapointValue("do_value", fVal);
+        return createDpWithValue("do_value", (float)fVal);
     const std::string errMsg(
             string("'do_value' encoding error:'") +
             typeName + "' cannot be used with content of type magVal, or missing val I/F");
@@ -572,7 +615,7 @@ Datapoint*
 Pivot2OpcuaFilter::QualifiedBoolStVal::
 createData(const std::string& typeName) {
     if (typeName == "opcua_sps")
-        return createIntDatapointValue("do_value", bVal);
+        return createDpWithValue("do_value", bVal);
 
     const std::string errMsg(
             string("'do_value' encoding error:'") +
@@ -589,7 +632,7 @@ Datapoint*
 Pivot2OpcuaFilter::QualifiedStringStVal::
 createData(const std::string& typeName) {
     if (typeName == "opcua_dps")
-        return createStringDatapointValue("do_value", sVal);
+        return createDpWithValue("do_value", sVal);
     const std::string errMsg(
             string("'do_value' encoding error:'") +
             typeName + "' cannot be used with stVal of type String");
@@ -607,6 +650,7 @@ createData(const std::string& typeName) {
  */
 void
 Pivot2OpcuaFilter::pivot2opcua(Reading* readingRef) {
+
     Datapoints& readDp(readingRef->getReadingData());
     for (Datapoint* dp : readDp) {
         // Expecting "PIVOT" in first level
@@ -660,6 +704,127 @@ Pivot2OpcuaFilter::pivot2opcua(Reading* readingRef) {
 }
 
 /**
+ * Convert a Reading from OPCUA to PIVOT.
+ * @param readingRef The Reading.
+ *      If the reading content is compatible, it is replaced by the equivalent PIVOT data
+ */
+void
+Pivot2OpcuaFilter::opcua2pivot(Reading* reading) {
+    if (reading == nullptr) return;
+
+    Datapoints& readDp(reading->getReadingData());
+    LOG_INFO("Pivot2OpcuaFilter::opcua2pivot('%s' :%d elem.)",
+            reading->getAssetName().c_str(),
+            readDp.size());
+
+    // Values to read from the reading
+    string co_id;
+    string co_type;
+    DatapointValue* co_value(nullptr);
+    long co_test(-1);
+    long co_neg(-1);
+    long co_qu(-1);
+    long co_se(-1);
+    long co_ts(-1);
+
+    for (Datapoint* dp : readDp) {
+        /* An "opcua_operation" is expected to be an array with:
+         *  "co_id", "co_type", "co_value", "co_test", "co_negative", "co_qu", "co_se", "co_ts"
+         */
+        const string name(dp->getName());
+        string* targetStr(nullptr);
+        long* targetInt(nullptr);
+        DatapointValue& data = dp->getData();
+
+        if (name == "co_id") {
+            targetStr = &co_id;
+        } else if (name == "co_type") {
+            targetStr = &co_type;
+        } else if (name == "co_value") {
+            co_value = &data;
+        } else if (name == "co_test") {
+            targetInt = &co_test;
+        } else if (name == "co_negative") {
+            targetInt = &co_neg;
+        } else if (name == "co_qu") {
+            targetInt = &co_qu;
+        } else if (name == "co_se") {
+            targetInt = &co_se;
+        } else if (name == "co_ts") {
+            targetInt = &co_ts;
+        } else {
+            LOG_WARNING("Unknown Reading element '%s' (Ignored)", name.c_str());
+        }
+
+        // Do actual reading
+        if (nullptr != targetInt) {
+            if (data.getType() != DatapointValue::T_INTEGER) {
+                LOG_WARNING("Reading element '%s' has an invalid type (expected INTEGER). Control ignored.", name.c_str());
+                return;
+            }
+            *targetInt = data.toInt();
+        }
+        if (nullptr != targetStr) {
+            if (data.getType() != DatapointValue::T_STRING) {
+                LOG_WARNING("Reading element '%s' has an invalid type (expected STRING). Control ignored.", name.c_str());
+                return;
+            }
+            *targetStr = data.toString();
+        }
+    }
+
+    // Check if all mandatory fields are OK
+    if (co_value != nullptr && co_id.size() > 0 && co_type.size() > 0 &&
+            co_test >= 0 && co_neg >= 0 && co_qu >= 0 && co_se >= 0 && co_ts >= 0) {
+        /* The expected output is:
+         {"PIVOT": { "GTIC": {
+                        "Cause": {"stVal": 0},
+                        "Select": {"stVal": <co_se>},
+                        "ComingFrom": "opcua",
+                        "Identifier": "<co_id>",
+                        "<co_type>" : {
+                            "t": { "SecondSinceEpoch": <co_ts> },
+                            "q": { "test": <co_test> },
+                            "ctlVal" : <co_value>
+                            }
+                    }
+                 }
+            }
+          Note : co_type is in ["SpcTyp", "DpcTyp", "IncType" or "ApcTyp"]
+         */
+        try {
+            // The Value must be read before cleaning old datapoints!
+
+            Datapoint* pivot = createDatapoint("PIVOT");
+            Datapoint* gtic = datapointAddElement(pivot, "GTIC");
+            datapointAddElementWithValue(gtic, "Cause", 0);
+            datapointAddElementWithValue(gtic, "Select", co_se);
+            datapointAddElementWithValue(gtic, "ComingFrom", "opcua");
+            datapointAddElementWithValue(gtic, "Identifier", co_id);
+            Datapoint* dvType = datapointAddElement(gtic, co_type);
+            Datapoint* dvTypeT = datapointAddElement(dvType, "t");
+            datapointAddElementWithValue(dvTypeT, "SecondSinceEpoch", co_ts);
+            Datapoint* dvTypeQ = datapointAddElement(dvType, "q");
+            datapointAddElementWithValue(dvTypeQ, "test", co_test);
+            datapointAddElementWithValue(dvType, "ctlVal", *co_value);
+
+            reading->removeAllDatapoints();
+
+            LOG_INFO("Successfully created PIVOT ID='%s' with type '%s'",
+                    co_id.c_str(), co_type.c_str());
+            reading->addDatapoint(pivot);
+        } catch (const InvalidPivotContent& e) {
+            LOG_WARNING("Failed to build PIVOT content from '%s(%s)'",
+                    co_id.c_str(), co_type.c_str());
+            LOG_WARNING("... Reason : %s", e.context());
+        }
+    } else {
+        LOG_WARNING("'opcua_operation' ignored since some mandatory fields were not provided.");
+    }
+    return;
+}
+
+/**
  * The actual filtering code
  *
  * @param readingSet The reading data to filter
@@ -671,7 +836,10 @@ Pivot2OpcuaFilter::ingest(ReadingSet *readingSet) {
     // Filter enable, process the readings
     if (isEnabled()) {
         Readings* readings(readingSet->getAllReadingsPtr());
+        LOG_DEBUG("Pivot2OpcuaFilter::ingest(%d readings)", readings->size());
         for (Reading* reading : *readings) {
+
+            std::string assetName = reading->getAssetName();
             AssetTracker* tracker(AssetTracker::getAssetTracker());
             if (nullptr != tracker) {
                 // We are modifying this asset so put an entry in the asset tracker
@@ -679,7 +847,12 @@ Pivot2OpcuaFilter::ingest(ReadingSet *readingSet) {
                         getName(), reading->getAssetName(), string("Filter"));
             }
             // proceed to conversion
-            pivot2opcua(reading);
+            if (assetName == "opcua_operation") {
+                opcua2pivot(reading);
+            } else {
+                // Default case convert PIVOT to OPCUA
+                pivot2opcua(reading);
+            }
         }
     }
     // Pass on all readings
