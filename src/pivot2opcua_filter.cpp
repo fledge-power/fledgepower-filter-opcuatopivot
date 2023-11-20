@@ -778,7 +778,6 @@ Pivot2OpcuaFilter::opcua2pivot(Reading* reading) {
             co_test >= 0 && co_neg >= 0 && co_qu >= 0 && co_se >= 0 && co_ts >= 0) {
         /* The expected output is:
          {"PIVOT": { "GTIC": {
-                        "Cause": {"stVal": 0},
                         "Select": {"stVal": <co_se>},
                         "ComingFrom": "opcua",
                         "Identifier": "<co_id>",
@@ -797,7 +796,6 @@ Pivot2OpcuaFilter::opcua2pivot(Reading* reading) {
 
             Datapoint* pivot = createDatapoint("PIVOT");
             Datapoint* gtic = datapointAddElement(pivot, "GTIC");
-            datapointAddElementWithValue(gtic, "Cause", 0);
             datapointAddElementWithValue(gtic, "Select", co_se);
             datapointAddElementWithValue(gtic, "ComingFrom", "opcua");
             datapointAddElementWithValue(gtic, "Identifier", co_id);
