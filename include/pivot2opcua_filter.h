@@ -216,6 +216,21 @@ class Pivot2OpcuaFilter : public FledgeFilter {
         Qualified*      m_Qualified; /// Pointer to a QualifiedxxPtr above
     };
 
+    /** Common behavior for PIVOT measurements*/
+    class TelecommandReplyPivot {
+    public:
+        explicit TelecommandReplyPivot(const Datapoints* dict);
+        virtual ~TelecommandReplyPivot(void) = default;
+        const std::string& pivotId(void)const {return m_Identifier;}
+        void updateReading(const DataDictionnary* dictPtr, Reading* orig)const;
+
+    private:
+        string          m_Identifier;
+        int             m_ConfStVal;
+        bool            m_Valid;
+    };
+
+
     static Datapoints* findDictElement(Datapoints* dict, const string& key);
     static string getStringStVal(Datapoints* dict, const string& context);
     static int64_t getIntStVal(Datapoints* dict, const string& context);

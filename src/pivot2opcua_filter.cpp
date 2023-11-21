@@ -100,6 +100,21 @@ datapointAddElementWithValue(Datapoint* dp, const string& name, const T value)
     return element;
 }
 
+static const char* opcuaToPivotTypes(const string &opcType) {
+    if (opcType == "opcua_sps") { return "SPSTyp";}
+    if (opcType == "opcua_dps") { return "DPSTyp";}
+    if (opcType == "opcua_bsc") { return "BSCTyp";}
+    if (opcType == "opcua_mvi") { return "MVTyp";}
+    if (opcType == "opcua_mvf") { return "MVTyp";}
+    if (opcType == "opcua_spc") { return "SPCTyp";}
+    if (opcType == "opcua_dpc") { return "DPCTyp";}
+    if (opcType == "opcua_inc") { return "INCTyp";}
+    if (opcType == "opcua_apc") { return "APCTyp";}
+    if (opcType == "opcua_bsc") { return "BSCTyp";}
+    LOG_WARNING("Unknown OPCUA type '%s'", opcType.c_str());
+    return "UNKTyp";
+}
+
 }  // namespace
 
 /**
@@ -412,6 +427,79 @@ updateReading(const DataDictionnary* dictPtr, Reading* reading)const {
     reading->addDatapoint(dp);
 }
 
+Pivot2OpcuaFilter::
+TelecommandReplyPivot::TelecommandReplyPivot(const Datapoints* dict):
+m_Identifier(""),
+m_ConfStVal(-1),
+m_Valid(false) {
+    for (Datapoint* dp : *dict)
+    {
+        if (nullptr == dp) continue;
+
+        const string name(dp->getName());
+        DatapointValue& dpv(dp->getData());
+        LOG_INFO("TelecommandReplyPivot : %s", name.c_str());
+
+        // Sub elements must contain "Identifier"(string) and "Confirmation.stVal" (bool)
+        if (name == "Identifier") {
+            if (dpv.getType() != DatapointValue::T_STRING) {
+                LOG_WARNING("TelecommandReplyPivot : Element 'GTIC.%s.Identifier' is not a STRING!" , name.c_str());
+                continue;
+            }
+            m_Identifier = dpv.toStringValue();
+            LOG_DEBUG("TelecommandReplyPivot : Read identifier = %s", m_Identifier.c_str());
+        } else if (name == "Confirmation") {
+            if (dpv.getType() != DatapointValue::T_DP_DICT) {
+                LOG_WARNING("TelecommandReplyPivot : Element 'GTIC.%s.Confirmation' is not a DICT!" , name.c_str());
+                continue;
+            }
+            for (Datapoint* dp2: (*dpv.getDpVec())) {
+                const string name2(dp2->getName());
+                DatapointValue& dpv2(dp2->getData());
+                if (name2 == "stVal") {
+                    if (dpv2.getType() != DatapointValue::T_INTEGER) {
+                        LOG_WARNING("TelecommandReplyPivot : Element 'GTIC.%s.Confirmation.stVal' is not a INTEGER!" , name.c_str());
+                        continue;
+                    }
+                    m_ConfStVal = dpv2.toInt();
+                }
+            }
+        } else {
+            LOG_DEBUG("TelecommandReplyPivot : Ignoring unused field '%s'", name.c_str());
+        }
+    }
+    if (m_ConfStVal >= 0 && m_Identifier.length() > 0) {
+        m_Valid = true;
+    } else {
+        LOG_WARNING("TelecommandReplyPivot : Element incomplete. Skipped");
+    }
+}
+
+void
+Pivot2OpcuaFilter::
+TelecommandReplyPivot::updateReading(const DataDictionnary* dictPtr, Reading* orig)const {
+    if (!(m_ConfStVal >= 0 && m_Identifier.length() > 0)){
+        LOG_WARNING("TelecommandReplyPivot::updateReading() : Element incomplete/invalid. Skipped");
+        return;
+    }
+    LOG_INFO("TelecommandReplyPivot::updateReading(id='%s', stVal=%d)",
+            m_Identifier.c_str(), m_ConfStVal);
+
+    orig->removeAllDatapoints();
+
+    Datapoints* dp_vect = new Datapoints;    // //NOSONAR (Use of Fledge API)
+    dp_vect->push_back(createDpWithValue("ro_id", m_Identifier));
+    // Note: m_ConfStVal has a NEGATIVE meaning (0=ACK, 1= Not ACK)
+    const int iReply(m_ConfStVal == 0 ? 1 : 0);
+    dp_vect->push_back(createDpWithValue("ro_reply", iReply));
+
+    DatapointValue dpVal(dp_vect, true);
+    Datapoint* dp(new Datapoint("opcua_reply", dpVal));  // //NOSONAR (Use of Fledge API)
+    LOG_INFO("Successfully converted PIVOT ID='%s' from type 'PIVOT.GTIC' to OPCUA 'opcua_reply'",
+            m_Identifier.c_str());
+    orig->addDatapoint(dp);
+}
+
 namespace {
 using Datapoints = std::vector<Datapoint *>;
 inline Datapoints* getDatapointValueObjVal(DatapointValue& data, const string& context) {
@@ -669,7 +757,20 @@ Pivot2OpcuaFilter::pivot2opcua(Reading* readingRef) {
         Datapoints* gtElems(data.getDpVec());
         for (Datapoint* gtElem : *gtElems) {
             const string gtName(gtElem->getName());
+            DatapointValue& gtData = gtElem->getData();
             // Check if the GTxx is known
+            if (gtName == "GTIC") {
+                try {
+                    TelecommandReplyPivot pivot(gtData.getDpVec());
+                    pivot.updateReading(m_dictionnary.get(), readingRef);
+                    return;
+                } catch (const InvalidPivotContent& e) {
+                    LOG_WARNING("Failed to extract PIVOT content from '%s.%s'",
+                            name.c_str(), gtName.c_str());
+                    LOG_WARNING("... Reason : %s", e.context());
+                    continue;
+                }
+            }
 
             Str2Vect_map_t::const_iterator gtIter(Rules::gtix2pivotTypeMap.find(gtName));
 
@@ -680,7 +781,6 @@ Pivot2OpcuaFilter::pivot2opcua(Reading* readingRef) {
             }
 
             // Found matching (e.g. "PIVOT.GTIM")
-            DatapointValue& gtData = gtElem->getData();
             if (gtData.getType() != DatapointValue::T_DP_DICT) {
                 LOG_WARNING("invalid content for Datapoint '%s'. expecting T_DP_DICT",
                         gtName.c_str());
@@ -722,8 +822,6 @@ Pivot2OpcuaFilter::opcua2pivot(Reading* reading) {
     string co_type;
     DatapointValue* co_value(nullptr);
     long co_test(-1);
-    long co_neg(-1);
-    long co_qu(-1);
     long co_se(-1);
     long co_ts(-1);
 
@@ -744,10 +842,6 @@ Pivot2OpcuaFilter::opcua2pivot(Reading* reading) {
             co_value = &data;
         } else if (name == "co_test") {
             targetInt = &co_test;
-        } else if (name == "co_negative") {
-            targetInt = &co_neg;
-        } else if (name == "co_qu") {
-            targetInt = &co_qu;
         } else if (name == "co_se") {
             targetInt = &co_se;
         } else if (name == "co_ts") {
@@ -769,13 +863,13 @@ Pivot2OpcuaFilter::opcua2pivot(Reading* reading) {
                 LOG_WARNING("Reading element '%s' has an invalid type (expected STRING). Control ignored.", name.c_str());
                 return;
             }
-            *targetStr = data.toString();
+            *targetStr = data.toStringValue();
         }
     }
 
     // Check if all mandatory fields are OK
     if (co_value != nullptr && co_id.size() > 0 && co_type.size() > 0 &&
-            co_test >= 0 && co_neg >= 0 && co_qu >= 0 && co_se >= 0 && co_ts >= 0) {
+            co_test >= 0 && co_se >= 0 && co_ts >= 0) {
         /* The expected output is:
          {"PIVOT": { "GTIC": {
                         "Select": {"stVal": <co_se>},
@@ -799,7 +893,7 @@ Pivot2OpcuaFilter::opcua2pivot(Reading* reading) {
             datapointAddElementWithValue(gtic, "Select", co_se);
             datapointAddElementWithValue(gtic, "ComingFrom", "opcua");
             datapointAddElementWithValue(gtic, "Identifier", co_id);
-            Datapoint* dvType = datapointAddElement(gtic, co_type);
+            Datapoint* dvType = datapointAddElement(gtic, ::opcuaToPivotTypes(co_type));
             Datapoint* dvTypeT = datapointAddElement(dvType, "t");
             datapointAddElementWithValue(dvTypeT, "SecondSinceEpoch", co_ts);
             Datapoint* dvTypeQ = datapointAddElement(dvType, "q");
