@@ -150,7 +150,7 @@ Datapoint* DocToDataPoint(const string& name, Value & value, const string& depth
     return new Datapoint(name, *dpv);
 }
 
-Readings JsonToReading(const std::string& json, const string& asset_name) {
+static Readings JsonToReading(const std::string& json, const string& asset_name) {
     Readings result;
     Document doc;
     doc.Parse(json.c_str());
@@ -173,6 +173,35 @@ Readings JsonToReading(const std::string& json, const string& asset_name) {
     return result;
 }
 
+static Readings JsonToReadingMulti(const std::string& json, const string& asset_name) {
+    Readings result;
+    Document doc;
+    doc.Parse(json.c_str());
+    if (doc.HasParseError()) {
+        LOG_ERROR("Parse error: Code : %d, at offset %u near '%.20s'",
+                doc.GetParseError(),
+                doc.GetErrorOffset(),
+                json.c_str() + doc.GetErrorOffset()
+        );
+        throw std::exception();
+    }
+    Value::MemberIterator it;
+
+    Datapoints dpVect;
+    for (it = doc.MemberBegin(); it != doc.MemberEnd(); it++) {
+        const string name = it->name.GetString();
+        Value& value (it->value);
+        Datapoint* newDp(DocToDataPoint(name, value));
+        dpVect.push_back(newDp);
+    }
+    result.push_back(new Reading(asset_name, dpVect));
+    return result;
+}
+void appendJsonToReadingSet(ReadingSet& rSet, const std::string& json, const string& asset_name) {
+    Readings readings(JsonToReading(json, asset_name));
+    rSet.append(readings);
+}
+
 DatapointValue* get_datapoint_by_key(Datapoints* dps, const string& s) {
     Datapoints::const_iterator it = find_if(dps->begin(), dps->end(),
             [s] (const Datapoint* dp) { return dp->getName() == s; } );
@@ -192,6 +221,36 @@ inline DatapointValue* getDoResult(ReadingSet& rSet) {
     return get_datapoint_by_key(&dp, "data_object");
 }
 
+inline DatapointValue* getRoResult(ReadingSet& rSet) {
+    Datapoints& dp(rSet.getAllReadingsPtr()->back()->getReadingData());
+    return get_datapoint_by_key(&dp, "opcua_reply");
+}
+
+inline DatapointValue* getPivotResult(ReadingSet& rSet) {
+    Datapoints& dp(rSet.getAllReadingsPtr()->back()->getReadingData());
+    return get_datapoint_by_key(&dp, "PIVOT");
+}
+
+static uint32_t checkRoResult(Datapoints* dp, const string& id, int reply) {
+    uint32_t resMask(0);
+    for (Datapoint* dp2 : *dp) {
+        const string name2(dp2->getName());
+        DatapointValue& dpv2 = dp2->getData();
+        const DatapointValue::dataTagType tagType(dpv2.getType());
+        if (name2 == "ro_reply") {
+            if (tagType == DatapointValue::T_INTEGER
+                    && dpv2.toInt() == reply) {
+                resMask |= 0x1;
+            }
+        } else if (name2 == "ro_id") {
+            if (tagType == DatapointValue::T_STRING
+                    && dpv2.toStringValue() == id) {
+                resMask |= 0x2;
+            }
+        } else  resMask |= 0x8000;
+    }
+    return resMask;
+}
 
 }   // namespace
 
@@ -505,6 +564,70 @@ static const char * const JsonPivotDps2 =
             "Confirmation": {"stVal": false},
             "ComingFrom": "opcua",
             "Identifier":  "pivotDPS",
+            "TmOrg" :  {"stVal":"substituted"},
+            "TmValidity" :  {"stVal":"good"},
+            "DpsTyp" : {
+                JSON_DEF_Q_QUALITY,
+                JSON_DEF_T_QUALITY(12345678),
+                "stVal" : "on"
+            }
+        }
+    }
+});
+
+static const char * const JsonPivotReplyDpc =
+        QUOTE({
+                "co_id" : "pivotDPC",
+                "co_se" : 1,
+                "co_type" : "opcua_dpc",
+                "co_test" : 0,
+                "co_ts" : 123456,
+                "co_value" : "intermediate-state"
+    });
+
+static const char * const JsonPivotReplyInc =
+        QUOTE({
+                "co_id" : "pivotINC",
+                "co_se" : 0,
+                "co_type" : "opcua_inc",
+                "co_test" : 1,
+                "co_ts" : 123456,
+                "co_value" : 3
+    });
+
+static const char * const JsonPivotReplyApc =
+        QUOTE({
+                "co_id" : "pivotAPC",
+                "co_se" : 0,
+                "co_type" : "opcua_apc",
+                "co_test" : 1,
+                "co_ts" : 123456,
+                "co_value" : 1
+    });
+
+static const char * const JsonPivotReplyBsc =
+        QUOTE({
+                "co_id" : "pivotBSC",
+                "co_se" : 0,
+                "co_type" : "opcua_bsc",
+                "co_test" : 1,
+                "co_ts" : 123456,
+                "co_value" : 1,
+                "co_whatever" : 1
+    });
+
+static const char * const JsonPivotReply2 =
+        QUOTE({
+    "PIVOT" :{
+        "GTIC": {
+            "Origin": {"stVal": 4},
+            "ChgValCnt": {"stVal": 4},
+            "NormalSrc": {"stVal": 4},
+            "NormalVal": {"stVal": 4},
+            "Cause": {"stVal": 4},
+            "Confirmation": {"stVal": __REPLY__},
+            "ComingFrom": "opcua",
+            "Identifier":  "pivotINC",
             "TmOrg" :  {"stVal":"substituted"},
             "TmValidity" :  {"stVal":"good"},
             "DpsTyp" : {

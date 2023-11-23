@@ -68,6 +68,13 @@ createDpWithValue(const string& name, const long value) {  // //NOLINT  Fledge A
 }
 
 static Datapoint*
+createDpWithValue(const string& name, const float value) {
+    DatapointValue dpv(value);
+    Datapoint* dp = new Datapoint(name, dpv);
+    return dp;
+}
+
+static Datapoint*
 createDpWithValue(const string& name, const string& value) {
     DatapointValue dpv(value);
     Datapoint* dp = new Datapoint(name, dpv);
@@ -79,6 +86,11 @@ createDpWithValue(const string& name, const DatapointValue& value) {
     DatapointValue dpv(value);
     Datapoint* dp = new Datapoint(name, dpv);
     return dp;
+}
+
+static inline Datapoint*
+createDpWithIntValue(const string& name, const long value) {  // //NOLINT  Fledge API
+    return createDpWithValue(name, value);
 }
 
 template <class T>
@@ -401,13 +413,13 @@ updateReading(const DataDictionnary* dictPtr, Reading* reading)const {
     // Build content of "data_object" Object
     Datapoints* dp_vect = new Datapoints;    // //NOSONAR (Use of Fledge API)
 
-    dp_vect->push_back(createDpWithValue("do_cot", m_Cause));
-    dp_vect->push_back(createDpWithValue("do_confirmation", m_Confirmation));
+    dp_vect->push_back(createDpWithIntValue("do_cot", m_Cause));
+    dp_vect->push_back(createDpWithIntValue("do_confirmation", m_Confirmation));
     dp_vect->push_back(createDpWithValue("do_comingfrom", m_ComingFrom));
     dp_vect->push_back(createDpWithValue("do_id", m_Identifier));
     dp_vect->push_back(createDpWithValue("do_type", element.m_opcType));
-    dp_vect->push_back(createDpWithValue("do_quality", m_Qualified->quality.toDetails()));
-    dp_vect->push_back(createDpWithValue("do_ts_quality", m_Qualified->ts.toDetails()));
+    dp_vect->push_back(createDpWithIntValue("do_quality", m_Qualified->quality.toDetails()));
+    dp_vect->push_back(createDpWithIntValue("do_ts_quality", m_Qualified->ts.toDetails()));
     dp_vect->push_back(createDpWithValue("do_value_quality", m_Qualified->quality.validity()));
     dp_vect->push_back(createDpWithValue("do_source", m_Qualified->quality.getSource()));
     dp_vect->push_back(createDpWithValue("do_ts", m_Qualified->ts.nbSec()));
@@ -465,7 +477,7 @@ m_Valid(false) {
     if (m_ConfStVal >= 0 && m_Identifier.length() > 0) {
         m_Valid = true;
     } else {
-        LOG_WARNING("TelecommandReplyPivot : Element incomplete. Skipped");
+        throw InvalidPivotContent("TelecommandReplyPivot : Element incomplete. Skipped");
     }
 }
 
@@ -485,7 +497,7 @@ TelecommandReplyPivot::updateReading(const DataDictionnary* dictPtr, Reading* or
     dp_vect->push_back(createDpWithValue("ro_id", m_Identifier));
     // Note: m_ConfStVal has a NEGATIVE meaning (0=ACK, 1= Not ACK)
     const int iReply(m_ConfStVal == 0 ? 1 : 0);
-    dp_vect->push_back(createDpWithValue("ro_reply", iReply));
+    dp_vect->push_back(createDpWithIntValue("ro_reply", iReply));
 
     DatapointValue dpVal(dp_vect, true);
     Datapoint* dp(new Datapoint("opcua_reply", dpVal));  // //NOSONAR (Use of Fledge API)
@@ -697,7 +709,7 @@ Datapoint*
 Pivot2OpcuaFilter::QualifiedBoolStVal::
 createData(const std::string& typeName) {
     if (typeName == "opcua_sps")
-        return createDpWithValue("do_value", bVal);
+        return createDpWithIntValue("do_value", bVal);
 
     const std::string errMsg(
             string("'do_value' encoding error:'") +
@@ -881,31 +893,25 @@ Pivot2OpcuaFilter::opcua2pivot(Reading* reading) {
             }
           Note : co_type is in ["SpcTyp", "DpcTyp", "IncType" or "ApcTyp"]
          */
-        try {
-            // The Value must be read before cleaning old datapoints!
+        // The Value must be read before cleaning old datapoints!
 
-            Datapoint* pivot = createDatapoint("PIVOT");
-            Datapoint* gtic = datapointAddElement(pivot, "GTIC");
-            datapointAddElementWithValue(gtic, "Select", co_se);
-            datapointAddElementWithValue(gtic, "ComingFrom", "opcua");
-            datapointAddElementWithValue(gtic, "Identifier", co_id);
-            Datapoint* dvType = datapointAddElement(gtic, ::opcuaToPivotTypes(co_type));
-            Datapoint* dvTypeT = datapointAddElement(dvType, "t");
-            datapointAddElementWithValue(dvTypeT, "SecondSinceEpoch", co_ts);
-            Datapoint* dvTypeQ = datapointAddElement(dvType, "q");
-            datapointAddElementWithValue(dvTypeQ, "test", co_test);
-            datapointAddElementWithValue(dvType, "ctlVal", *co_value);
+        Datapoint* pivot = createDatapoint("PIVOT");
+        Datapoint* gtic = datapointAddElement(pivot, "GTIC");
+        datapointAddElementWithValue(gtic, "Select", co_se);
+        datapointAddElementWithValue(gtic, "ComingFrom", "opcua");
+        datapointAddElementWithValue(gtic, "Identifier", co_id);
+        Datapoint* dvType = datapointAddElement(gtic, ::opcuaToPivotTypes(co_type));
+        Datapoint* dvTypeT = datapointAddElement(dvType, "t");
+        datapointAddElementWithValue(dvTypeT, "SecondSinceEpoch", co_ts);
+        Datapoint* dvTypeQ = datapointAddElement(dvType, "q");
+        datapointAddElementWithValue(dvTypeQ, "test", co_test);
+        datapointAddElementWithValue(dvType, "ctlVal", *co_value);
 
-            reading->removeAllDatapoints();
+        reading->removeAllDatapoints();
 
-            LOG_INFO("Successfully created PIVOT ID='%s' with type '%s'",
-                    co_id.c_str(), co_type.c_str());
-            reading->addDatapoint(pivot);
-        } catch (const InvalidPivotContent& e) {
-            LOG_WARNING("Failed to build PIVOT content from '%s(%s)'",
-                    co_id.c_str(), co_type.c_str());
-            LOG_WARNING("... Reason : %s", e.context());
-        }
+        LOG_INFO("Successfully created PIVOT ID='%s' with type '%s'",
+                co_id.c_str(), co_type.c_str());
+        reading->addDatapoint(pivot);
     } else {
         LOG_WARNING("'opcua_operation' ignored since some mandatory fields were not provided.");
     }
