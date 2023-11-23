@@ -41,16 +41,14 @@ static const string stValName = "stVal";   // //NOLINT
 /* HELPER FUNCTIONS*/
 
 static Datapoint*
-createDatapoint(const string& name)
-{
+createDatapoint(const string& name) {
     Datapoints* datapoints = new Datapoints;
     DatapointValue dpv(datapoints, true);
     return new Datapoint(name, dpv);
 }
 
 static Datapoint*
-datapointAddElement(Datapoint* dp, const string& name)
-{
+datapointAddElement(Datapoint* dp, const string& name) {
     DatapointValue& dpv = dp->getData();
     Datapoints* subDatapoints = dpv.getDpVec();
     Datapoint* element = createDatapoint(name);
@@ -63,24 +61,21 @@ datapointAddElement(Datapoint* dp, const string& name)
 }
 
 static Datapoint*
-createDpWithValue(const string& name, const long value)
-{
+createDpWithValue(const string& name, const long value) {  // //NOLINT  Fledge API
     DatapointValue dpv(value);
     Datapoint* dp = new Datapoint(name, dpv);
     return dp;
 }
 
 static Datapoint*
-createDpWithValue(const string& name, const string& value)
-{
+createDpWithValue(const string& name, const string& value) {
     DatapointValue dpv(value);
     Datapoint* dp = new Datapoint(name, dpv);
     return dp;
 }
 
 static Datapoint*
-createDpWithValue(const string& name, const DatapointValue& value)
-{
+createDpWithValue(const string& name, const DatapointValue& value) {
     DatapointValue dpv(value);
     Datapoint* dp = new Datapoint(name, dpv);
     return dp;
@@ -88,8 +83,7 @@ createDpWithValue(const string& name, const DatapointValue& value)
 
 template <class T>
 static Datapoint*
-datapointAddElementWithValue(Datapoint* dp, const string& name, const T value)
-{
+datapointAddElementWithValue(Datapoint* dp, const string& name, const T value) {
     DatapointValue& dpv = dp->getData();
     Datapoints* subDatapoints = dpv.getDpVec();
     Datapoint* element = createDpWithValue(name, value);
@@ -432,8 +426,7 @@ TelecommandReplyPivot::TelecommandReplyPivot(const Datapoints* dict):
 m_Identifier(""),
 m_ConfStVal(-1),
 m_Valid(false) {
-    for (Datapoint* dp : *dict)
-    {
+    for (Datapoint* dp : *dict) {
         if (nullptr == dp) continue;
 
         const string name(dp->getName());
@@ -453,12 +446,13 @@ m_Valid(false) {
                 LOG_WARNING("TelecommandReplyPivot : Element 'GTIC.%s.Confirmation' is not a DICT!" , name.c_str());
                 continue;
             }
-            for (Datapoint* dp2: (*dpv.getDpVec())) {
+            for (Datapoint* dp2 : (*dpv.getDpVec())) {
                 const string name2(dp2->getName());
                 DatapointValue& dpv2(dp2->getData());
                 if (name2 == "stVal") {
                     if (dpv2.getType() != DatapointValue::T_INTEGER) {
-                        LOG_WARNING("TelecommandReplyPivot : Element 'GTIC.%s.Confirmation.stVal' is not a INTEGER!" , name.c_str());
+                        LOG_WARNING("TelecommandReplyPivot : Element 'GTIC.%s.Confirmation.stVal' is not a INTEGER!",
+                                name.c_str());
                         continue;
                     }
                     m_ConfStVal = dpv2.toInt();
@@ -478,7 +472,7 @@ m_Valid(false) {
 void
 Pivot2OpcuaFilter::
 TelecommandReplyPivot::updateReading(const DataDictionnary* dictPtr, Reading* orig)const {
-    if (!(m_ConfStVal >= 0 && m_Identifier.length() > 0)){
+    if (!(m_ConfStVal >= 0 && m_Identifier.length() > 0)) {
         LOG_WARNING("TelecommandReplyPivot::updateReading() : Element incomplete/invalid. Skipped");
         return;
     }
@@ -687,7 +681,7 @@ createData(const std::string& typeName) {
     if (typeName == "opcua_mvi" && hasI)
         return createDpWithValue("do_value", iVal);
     if  (typeName == "opcua_mvf" && hasF)
-        return createDpWithValue("do_value", (float)fVal);
+        return createDpWithValue("do_value", static_cast<float>(fVal));
     const std::string errMsg(
             string("'do_value' encoding error:'") +
             typeName + "' cannot be used with content of type magVal, or missing val I/F");
@@ -738,7 +732,6 @@ createData(const std::string& typeName) {
  */
 void
 Pivot2OpcuaFilter::pivot2opcua(Reading* readingRef) {
-
     Datapoints& readDp(readingRef->getReadingData());
     for (Datapoint* dp : readDp) {
         // Expecting "PIVOT" in first level
@@ -821,9 +814,9 @@ Pivot2OpcuaFilter::opcua2pivot(Reading* reading) {
     string co_id;
     string co_type;
     DatapointValue* co_value(nullptr);
-    long co_test(-1);
-    long co_se(-1);
-    long co_ts(-1);
+    int64_t co_test(-1);
+    int64_t co_se(-1);
+    int64_t co_ts(-1);
 
     for (Datapoint* dp : readDp) {
         /* An "opcua_operation" is expected to be an array with:
@@ -831,7 +824,7 @@ Pivot2OpcuaFilter::opcua2pivot(Reading* reading) {
          */
         const string name(dp->getName());
         string* targetStr(nullptr);
-        long* targetInt(nullptr);
+        int64_t* targetInt(nullptr);
         DatapointValue& data = dp->getData();
 
         if (name == "co_id") {
@@ -853,14 +846,17 @@ Pivot2OpcuaFilter::opcua2pivot(Reading* reading) {
         // Do actual reading
         if (nullptr != targetInt) {
             if (data.getType() != DatapointValue::T_INTEGER) {
-                LOG_WARNING("Reading element '%s' has an invalid type (expected INTEGER). Control ignored.", name.c_str());
+                LOG_WARNING("Reading element '%s' has an invalid type "
+                        "(expected INTEGER). Control ignored.", name.c_str());
                 return;
             }
-            *targetInt = data.toInt();
+            *targetInt = static_cast<int64_t>(data.toInt());
         }
         if (nullptr != targetStr) {
             if (data.getType() != DatapointValue::T_STRING) {
-                LOG_WARNING("Reading element '%s' has an invalid type (expected STRING). Control ignored.", name.c_str());
+                LOG_WARNING("Reading element '%s' has an invalid type "
+                        "(expected STRING). Control ignored.",
+                        name.c_str());
                 return;
             }
             *targetStr = data.toStringValue();
@@ -930,7 +926,6 @@ Pivot2OpcuaFilter::ingest(ReadingSet *readingSet) {
         Readings* readings(readingSet->getAllReadingsPtr());
         LOG_DEBUG("Pivot2OpcuaFilter::ingest(%d readings)", readings->size());
         for (Reading* reading : *readings) {
-
             std::string assetName = reading->getAssetName();
             AssetTracker* tracker(AssetTracker::getAssetTracker());
             if (nullptr != tracker) {

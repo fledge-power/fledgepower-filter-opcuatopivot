@@ -218,13 +218,13 @@ class Pivot2OpcuaFilter : public FledgeFilter {
 
     /** Common behavior for PIVOT measurements*/
     class TelecommandReplyPivot {
-    public:
+     public:
         explicit TelecommandReplyPivot(const Datapoints* dict);
         virtual ~TelecommandReplyPivot(void) = default;
         const std::string& pivotId(void)const {return m_Identifier;}
         void updateReading(const DataDictionnary* dictPtr, Reading* orig)const;
 
-    private:
+     private:
         string          m_Identifier;
         int             m_ConfStVal;
         bool            m_Valid;
