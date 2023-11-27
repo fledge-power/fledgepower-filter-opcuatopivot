@@ -36,18 +36,18 @@ using std::unique_ptr;
 namespace {
 using Datapoints = vector<Datapoint*>;
 
-static const string stValName = "stVal";   // //NOLINT
+const string stValName = "stVal";   // //NOLINT
 
 /* HELPER FUNCTIONS*/
 
-static Datapoint*
+Datapoint*
 createDatapoint(const string& name) {
-    Datapoints* datapoints = new Datapoints;
+    Datapoints* datapoints = new Datapoints;  // //NOSONAR (Use of FLEDGE API)
     DatapointValue dpv(datapoints, true);
-    return new Datapoint(name, dpv);
+    return new Datapoint(name, dpv);  // //NOSONAR (Use of FLEDGE API)
 }
 
-static Datapoint*
+Datapoint*
 datapointAddElement(Datapoint* dp, const string& name) {
     DatapointValue& dpv = dp->getData();
     Datapoints* subDatapoints = dpv.getDpVec();
@@ -60,41 +60,41 @@ datapointAddElement(Datapoint* dp, const string& name) {
     return element;
 }
 
-static Datapoint*
+Datapoint*
 createDpWithValue(const string& name, const long value) {  // //NOLINT  Fledge API
     DatapointValue dpv(value);
-    Datapoint* dp = new Datapoint(name, dpv);
+    Datapoint* dp = new Datapoint(name, dpv);  // //NOSONAR (Use of FLEDGE API)
     return dp;
 }
 
-static Datapoint*
+Datapoint*
 createDpWithValue(const string& name, const float value) {
     DatapointValue dpv(value);
-    Datapoint* dp = new Datapoint(name, dpv);
+    Datapoint* dp = new Datapoint(name, dpv);  // //NOSONAR (Use of FLEDGE API)
     return dp;
 }
 
-static Datapoint*
+Datapoint*
 createDpWithValue(const string& name, const string& value) {
     DatapointValue dpv(value);
-    Datapoint* dp = new Datapoint(name, dpv);
+    Datapoint* dp = new Datapoint(name, dpv);  // //NOSONAR (Use of FLEDGE API)
     return dp;
 }
 
-static Datapoint*
+Datapoint*
 createDpWithValue(const string& name, const DatapointValue& value) {
     DatapointValue dpv(value);
-    Datapoint* dp = new Datapoint(name, dpv);
+    Datapoint* dp = new Datapoint(name, dpv);  // //NOSONAR (Use of FLEDGE API)
     return dp;
 }
 
-static inline Datapoint*
+inline Datapoint*
 createDpWithIntValue(const string& name, const long value) {  // //NOLINT  Fledge API
     return createDpWithValue(name, value);
 }
 
 template <class T>
-static Datapoint*
+Datapoint*
 datapointAddElementWithValue(Datapoint* dp, const string& name, const T value) {
     DatapointValue& dpv = dp->getData();
     Datapoints* subDatapoints = dpv.getDpVec();
@@ -106,7 +106,7 @@ datapointAddElementWithValue(Datapoint* dp, const string& name, const T value) {
     return element;
 }
 
-static const char* opcuaToPivotTypes(const string &opcType) {
+const char* opcuaToPivotTypes(const string &opcType) {
     if (opcType == "opcua_sps") { return "SPSTyp";}
     if (opcType == "opcua_dps") { return "DPSTyp";}
     if (opcType == "opcua_bsc") { return "BSCTyp";}
@@ -143,7 +143,7 @@ Pivot2OpcuaFilter::Pivot2OpcuaFilter(const string& filterName,
 }
 
 Pivot2OpcuaFilter::Datapoints*
-Pivot2OpcuaFilter::findDictElement(Datapoints* dict, const string& key) {
+Pivot2OpcuaFilter::findDictElement(const Datapoints* dict, const string& key) {
     for (Datapoint* dp : *dict) {
         if (dp->getName() == key) {
             DatapointValue& data = dp->getData();
@@ -157,10 +157,10 @@ Pivot2OpcuaFilter::findDictElement(Datapoints* dict, const string& key) {
 }
 
 string
-Pivot2OpcuaFilter::getStringStVal(Datapoints* dict, const string& context) {
+Pivot2OpcuaFilter::getStringStVal(const Datapoints* dict, const string& context) {
     for (Datapoint* dp : *dict) {
         if (dp->getName() == stValName) {
-            DatapointValue& data = dp->getData();
+            const DatapointValue& data = dp->getData();
             const DatapointValue::dataTagType dType(data.getType());
             if (dType == DatapointValue::T_STRING) {
                 return data.toStringValue();
@@ -173,10 +173,10 @@ Pivot2OpcuaFilter::getStringStVal(Datapoints* dict, const string& context) {
 }
 
 int64_t
-Pivot2OpcuaFilter::getIntStVal(Datapoints* dict, const string& context) {
+Pivot2OpcuaFilter::getIntStVal(const Datapoints* dict, const string& context) {
     for (Datapoint* dp : *dict) {
         if (dp->getName() == stValName) {
-            DatapointValue& data = dp->getData();
+            const DatapointValue& data = dp->getData();
             const DatapointValue::dataTagType dType(data.getType());
             if (dType == DatapointValue::T_INTEGER) {
                 return static_cast<int64_t>(data.toInt());
@@ -226,7 +226,7 @@ m_Qualified(nullptr) {      // //NOSONAR (FP)
 
 void
 Pivot2OpcuaFilter::CommonMeasurePivot::
-ignoreField(CommonMeasurePivot* pivot, DatapointValue& data, const string& name) {
+ignoreField(CommonMeasurePivot* pivot, DatapointValue& data, const string& name) {  // //NOSONAR (Use of interface)
     (void)pivot;
     (void)data;
     LOG_DEBUG("Ignoring PIVOT field '%s'", name.c_str());
@@ -309,7 +309,7 @@ decodeMagVal(CommonMeasurePivot* pivot, DatapointValue& data, const string& name
     Datapoints* dp(data.getDpVec());
 
     try {
-        pivot->m_MagVal.reset(new QualifiedMagVal(dp));
+        pivot->m_MagVal.reset(new QualifiedMagVal(dp));  // //NOSONAR (Use of FLEDGE API)
         pivot->m_Qualified = pivot->m_MagVal.get();
         pivot->m_pivotType = name;
         pivot->m_readFields |= FieldMask_val;
@@ -326,7 +326,7 @@ decodeSpsVal(CommonMeasurePivot* pivot, DatapointValue& data, const string& name
     Datapoints* dp(data.getDpVec());
 
     try {
-        pivot->m_BoolVal.reset(new QualifiedBoolStVal(dp));
+        pivot->m_BoolVal.reset(new QualifiedBoolStVal(dp));  // //NOSONAR (Use of FLEDGE API)
         pivot->m_Qualified = pivot->m_BoolVal.get();
         pivot->m_pivotType = name;
         pivot->m_readFields |= FieldMask_val;
@@ -344,7 +344,7 @@ decodeDpsVal(CommonMeasurePivot* pivot, DatapointValue& data, const string& name
     Datapoints* dp(data.getDpVec());
 
     try {
-        pivot->m_StrVal.reset(new QualifiedStringStVal(dp));
+        pivot->m_StrVal.reset(new QualifiedStringStVal(dp));  // //NOSONAR (Use of FLEDGE API)
         pivot->m_Qualified = pivot->m_StrVal.get();
         pivot->m_pivotType = name;
         pivot->m_readFields |= FieldMask_val;
@@ -434,45 +434,12 @@ updateReading(const DataDictionnary* dictPtr, Reading* reading)const {
 }
 
 Pivot2OpcuaFilter::
-TelecommandReplyPivot::TelecommandReplyPivot(const Datapoints* dict):
-m_Identifier(""),
-m_ConfStVal(-1),
-m_Valid(false) {
+TelecommandReplyPivot::TelecommandReplyPivot(const Datapoints* dict) {
+    m_Identifier = "";
+    m_ConfStVal = -1;
+    m_Valid = false;
     for (Datapoint* dp : *dict) {
-        if (nullptr == dp) continue;
-
-        const string name(dp->getName());
-        DatapointValue& dpv(dp->getData());
-        LOG_INFO("TelecommandReplyPivot : %s", name.c_str());
-
-        // Sub elements must contain "Identifier"(string) and "Confirmation.stVal" (bool)
-        if (name == "Identifier") {
-            if (dpv.getType() != DatapointValue::T_STRING) {
-                LOG_WARNING("TelecommandReplyPivot : Element 'GTIC.%s.Identifier' is not a STRING!" , name.c_str());
-                continue;
-            }
-            m_Identifier = dpv.toStringValue();
-            LOG_DEBUG("TelecommandReplyPivot : Read identifier = %s", m_Identifier.c_str());
-        } else if (name == "Confirmation") {
-            if (dpv.getType() != DatapointValue::T_DP_DICT) {
-                LOG_WARNING("TelecommandReplyPivot : Element 'GTIC.%s.Confirmation' is not a DICT!" , name.c_str());
-                continue;
-            }
-            for (Datapoint* dp2 : (*dpv.getDpVec())) {
-                const string name2(dp2->getName());
-                DatapointValue& dpv2(dp2->getData());
-                if (name2 == "stVal") {
-                    if (dpv2.getType() != DatapointValue::T_INTEGER) {
-                        LOG_WARNING("TelecommandReplyPivot : Element 'GTIC.%s.Confirmation.stVal' is not a INTEGER!",
-                                name.c_str());
-                        continue;
-                    }
-                    m_ConfStVal = dpv2.toInt();
-                }
-            }
-        } else {
-            LOG_DEBUG("TelecommandReplyPivot : Ignoring unused field '%s'", name.c_str());
-        }
+        if (nullptr != dp) initLoop(dp->getName(), &dp->getData());
     }
     if (m_ConfStVal >= 0 && m_Identifier.length() > 0) {
         m_Valid = true;
@@ -483,7 +450,48 @@ m_Valid(false) {
 
 void
 Pivot2OpcuaFilter::
+TelecommandReplyPivot::initLoop(const string& name, DatapointValue* dpv) {
+    LOG_INFO("TelecommandReplyPivot : %s", name.c_str());
+    // Sub elements must contain "Identifier"(string) and "Confirmation.stVal" (bool)
+    if (name == "Identifier") {
+        if (dpv->getType() != DatapointValue::T_STRING) {
+            LOG_WARNING("TelecommandReplyPivot : Element 'GTIC.%s.Identifier' is not a STRING!" , name.c_str());
+        } else {
+            m_Identifier = dpv->toStringValue();
+            LOG_DEBUG("TelecommandReplyPivot : Read identifier = %s", m_Identifier.c_str());
+        }
+    } else if (name == "Confirmation") {
+        parseConfirmation(name, dpv);
+    } else {
+        LOG_DEBUG("TelecommandReplyPivot : Ignoring unused field '%s'", name.c_str());
+    }
+}
+
+void
+Pivot2OpcuaFilter::
+TelecommandReplyPivot::parseConfirmation(const string& name, DatapointValue* dpv) {
+    if (dpv->getType() != DatapointValue::T_DP_DICT) {
+        LOG_WARNING("TelecommandReplyPivot : Element 'GTIC.%s.Confirmation' is not a DICT!" , name.c_str());
+    } else {
+        for (Datapoint* dp2 : *(dpv->getDpVec())) {
+            const string name2(dp2->getName());
+            DatapointValue& dpv2(dp2->getData());
+            if (name2 == "stVal") {
+                if (dpv2.getType() != DatapointValue::T_INTEGER) {
+                    LOG_WARNING("TelecommandReplyPivot : Element 'GTIC.%s.Confirmation.stVal' is not a INTEGER!",
+                            name.c_str());
+                } else {
+                    m_ConfStVal = static_cast<int>(dpv2.toInt());
+                }
+            }
+        }
+    }
+}
+
+void
+Pivot2OpcuaFilter::
 TelecommandReplyPivot::updateReading(const DataDictionnary* dictPtr, Reading* orig)const {
+    (void)dictPtr;
     if (!(m_ConfStVal >= 0 && m_Identifier.length() > 0)) {
         LOG_WARNING("TelecommandReplyPivot::updateReading() : Element incomplete/invalid. Skipped");
         return;
@@ -628,7 +636,6 @@ timeAccuracy(0) {               // //NOSONAR (FP)
             for (Datapoint* qDp : *quality) {
                 const string qName(qDp->getName());
                 DatapointValue& qData = qDp->getData();
-                const DatapointValue::dataTagType qType(qData.getType());
 
                 if (qName == "clockFailure") {  // //NOSONAR
                     clockFailure = getDatapointValueIntVal(qData, "clockFailure");
@@ -668,11 +675,11 @@ Qualified(Datapoints* dict) :
 Pivot2OpcuaFilter::QualifiedMagVal::
 QualifiedMagVal(Datapoints* dict) :
     Qualified(dict),
-    m_mag(findDictElement(dict, "mag")),
-    hasF(false),
-    hasI(false),
-    fVal(0.0),
-    iVal(0) {
+    m_mag(findDictElement(dict, "mag")) {
+    hasF = false;
+    hasI = false;
+    fVal = 0.0;
+    iVal = 0;
     for (Datapoint* dp : *m_mag) {
         const string name(dp->getName());
         DatapointValue& data = dp->getData();
@@ -743,7 +750,7 @@ createData(const std::string& typeName) {
  *      Only One datapoint is translated.
  */
 void
-Pivot2OpcuaFilter::pivot2opcua(Reading* readingRef) {
+Pivot2OpcuaFilter::pivot2opcua(Reading* readingRef)const {
     Datapoints& readDp(readingRef->getReadingData());
     for (Datapoint* dp : readDp) {
         // Expecting "PIVOT" in first level
@@ -814,7 +821,7 @@ Pivot2OpcuaFilter::pivot2opcua(Reading* readingRef) {
  *      If the reading content is compatible, it is replaced by the equivalent PIVOT data
  */
 void
-Pivot2OpcuaFilter::opcua2pivot(Reading* reading) {
+Pivot2OpcuaFilter::opcua2pivot(Reading* reading)const {
     if (reading == nullptr) return;
 
     Datapoints& readDp(reading->getReadingData());

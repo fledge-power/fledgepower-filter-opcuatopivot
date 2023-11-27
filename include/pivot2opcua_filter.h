@@ -225,17 +225,19 @@ class Pivot2OpcuaFilter : public FledgeFilter {
         void updateReading(const DataDictionnary* dictPtr, Reading* orig)const;
 
      private:
+        void initLoop(const string& name, DatapointValue* dpv);
+        void parseConfirmation(const string& name, DatapointValue* dpv);
         string          m_Identifier;
         int             m_ConfStVal;
         bool            m_Valid;
     };
 
 
-    static Datapoints* findDictElement(Datapoints* dict, const string& key);
-    static string getStringStVal(Datapoints* dict, const string& context);
-    static int64_t getIntStVal(Datapoints* dict, const string& context);
-    void pivot2opcua(Reading* readDp);
-    void opcua2pivot(Reading* readDp);
+    static Datapoints* findDictElement(const Datapoints* dict, const string& key);
+    static string getStringStVal(const Datapoints* dict, const string& context);
+    static int64_t getIntStVal(const Datapoints* dict, const string& context);
+    void pivot2opcua(Reading* readDp)const;
+    void opcua2pivot(Reading* readDp)const;
     void                         handleConfig(const ConfigCategory& config);
     DataDictionnary_Ptr          m_dictionnary;
     std::mutex                   m_configMutex;

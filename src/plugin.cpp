@@ -79,9 +79,9 @@ PLUGIN_INFORMATION *plugin_info() {
  */
 PLUGIN_HANDLE plugin_init(ConfigCategory* config,
                           OUTPUT_HANDLE *outHandle,
-                          OUTPUT_STREAM output) {
+                          OUTPUT_STREAM output) {  // //NOSONAR (Fledge API)
     Logger::getLogger()->debug("Initializing plugin_init (" FILTER_NAME ")");
-    Pivot2OpcuaFilter *filter = new Pivot2OpcuaFilter(FILTER_NAME,  // //NOSONAR (Fledge API)
+    auto filter = new Pivot2OpcuaFilter(FILTER_NAME,  // //NOSONAR (Fledge API)
             *config,
             outHandle,
             output);
@@ -98,7 +98,7 @@ PLUGIN_HANDLE plugin_init(ConfigCategory* config,
 void plugin_ingest(PLUGIN_HANDLE handle,
         READINGSET *readingSet) {
     Logger::getLogger()->debug("plugin_ingest (" FILTER_NAME ")");
-    Pivot2OpcuaFilter *filter = static_cast<Pivot2OpcuaFilter*>(handle);
+    auto filter = static_cast<Pivot2OpcuaFilter*>(handle);
     filter->ingest(readingSet);
 }
 
@@ -110,7 +110,7 @@ void plugin_ingest(PLUGIN_HANDLE handle,
  */
 void plugin_reconfigure(PLUGIN_HANDLE handle, const std::string& newConfig) {
     Logger::getLogger()->info("plugin_reconfigure (" FILTER_NAME ")");
-    Pivot2OpcuaFilter *filter = static_cast<Pivot2OpcuaFilter*>(handle);
+    auto filter = static_cast<Pivot2OpcuaFilter*>(handle);
     filter->reconfigure(newConfig);
 }
 
@@ -119,7 +119,7 @@ void plugin_reconfigure(PLUGIN_HANDLE handle, const std::string& newConfig) {
  */
 void plugin_shutdown(PLUGIN_HANDLE handle) {
     Logger::getLogger()->info("plugin_shutdown (" FILTER_NAME ")");
-    Pivot2OpcuaFilter *filter = static_cast<Pivot2OpcuaFilter*>(handle);
+    auto filter = static_cast<Pivot2OpcuaFilter*>(handle);
     delete filter;  // //NOSONAR (Fledge API)
 }
 
