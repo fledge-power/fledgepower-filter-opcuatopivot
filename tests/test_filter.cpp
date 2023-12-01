@@ -162,8 +162,8 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterTM) {
     // Send a reading (PIVOT/GTIM)
     TRACE("  * Create reading()");
     ReadingSet rSet;
-    rSet.append(JsonToReading(JsonPivotMvf, "code1"));
-    rSet.append(JsonToReading(JsonPivotMvi, "code2"));
+    appendJsonToReadingSet(rSet, JsonPivotMvf, "code1");
+    appendJsonToReadingSet(rSet, JsonPivotMvi, "code2");
 
     f_reset_outputs();
     ASSERT_EQ(called_output_handle, nullptr);
@@ -327,7 +327,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterSps) {
     // Send a reading (PIVOT/GTIS)
     TRACE("  * Create reading()");
     ReadingSet rSet;
-    rSet.append(JsonToReading(JsonPivotSps, "testSps"));
+    appendJsonToReadingSet(rSet, JsonPivotSps, "testSps");
 
     f_reset_outputs();
     ASSERT_EQ(called_output_handle, nullptr);
@@ -373,7 +373,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterDps) {
     TRACE("  * Create reading()");
 
     ReadingSet rSet;
-    rSet.append(JsonToReading(JsonPivotDps, "testDps"));
+    appendJsonToReadingSet(rSet, JsonPivotDps, "testDps");
 
     f_reset_outputs();
     ASSERT_EQ(called_output_handle, nullptr);
@@ -411,7 +411,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterDps) {
 
 #define INGEST_DEBUG(rSet, json, _type)  \
     ReadingSet rSet;                                    \
-    rSet.append(JsonToReading(json, _type));            \
+    appendJsonToReadingSet(rSet, json, _type);          \
     DEBUG_DATA;\
     f_reset_outputs();                                  \
     ASSERT_EQ(called_output_handle, nullptr);           \
@@ -424,7 +424,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterDps) {
 
 #define INGEST(rSet, json, _type)  \
     ReadingSet rSet;                                    \
-    rSet.append(JsonToReading(json, _type));            \
+    appendJsonToReadingSet(rSet, json, _type);          \
                                                         \
     f_reset_outputs();                                  \
     ASSERT_EQ(called_output_handle, nullptr);           \
@@ -991,10 +991,365 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterMissFields) {
     }
 }
 
+// Test "opcua_reply" objects
+TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterReply) {
+    TITLE("*** TEST FILTER Pivot2OpcuaFilterReply");
+
+    Pivot2OpcuaFilter filter(FILTER_PARAMS);
+
+    // reference test
+    {
+        const std::string testStr(JsonPivotReplyDpc);
+        Readings readings(JsonToReadingMulti(testStr, "opcua_operation"));
+        ReadingSet rSet(&readings);
+        f_reset_outputs();
+        ASSERT_EQ(called_output_handle, nullptr);
+        ASSERT_EQ(called_output_reading, nullptr);
+        TRACE("  * INGEST() /opcua_operation");
+        filter.ingest(&rSet);
+        ASSERT_EQ(called_output_handle, &stubOutH);
+        ASSERT_EQ(called_output_reading, &rSet);
+
+        DatapointValue* pivot_dv = getPivotResult(rSet);
+        ASSERT_NE(pivot_dv, nullptr);
+        ASSERT_EQ(pivot_dv->getType(), DatapointValue::T_DP_DICT);
+        Datapoints*& dpObj(pivot_dv->getDpVec());
+        ASSERT_EQ(dpObj->size(), 1);
+        Datapoint* dp = dpObj->at(0);
+        ASSERT_EQ(dp->getName(), "GTIC");
+        DatapointValue& dpv = dp->getData();
+        ASSERT_EQ(dpv.getType(), DatapointValue::T_DP_DICT);
+
+        uint32_t resMask(0);
+        for (Datapoint* dp2 : *(dpv.getDpVec())) {
+            const string name2(dp2->getName());
+            DatapointValue& dpv2 = dp2->getData();
+            const DatapointValue::dataTagType tagType(dpv2.getType());
+            if (name2 == "Select") {
+                if (tagType == DatapointValue::T_INTEGER
+                        && dpv2.toInt() == 1) {
+                    resMask |= 0x1;
+                }
+            } else if (name2 == "ComingFrom") {
+                if (tagType == DatapointValue::T_STRING
+                        && dpv2.toStringValue() == "opcua") {
+                    resMask |= 0x2;
+                }
+            } else if (name2 == "Identifier") {
+                if (tagType == DatapointValue::T_STRING
+                        && dpv2.toStringValue() == "pivotDPC") {
+                    resMask |= 0x4;
+                } else {
+                    TRACE("Error: Mismatching 'GTIC.%s'", name2.c_str());
+                }
+            } else if (name2 == "DPCTyp") {
+                if (tagType == DatapointValue::T_DP_DICT)
+                {
+                    for (Datapoint* dp3 : *(dpv2.getDpVec())) {
+                        const string name3(dp3->getName());
+                        DatapointValue& dpv3 = dp3->getData();
+                        const DatapointValue::dataTagType tagType3(dpv3.getType());
+                        if (name3 == "t" &&
+                                tagType3 == DatapointValue::T_DP_DICT &&
+                                dpv3.getDpVec()->size() == 1 &&
+                                dpv3.getDpVec()->front()->getName() == "SecondSinceEpoch" &&
+                                dpv3.getDpVec()->front()->getData().getType() == DatapointValue::T_INTEGER &&
+                                dpv3.getDpVec()->front()->getData().toInt() == 123456) {
+                            resMask |= 0x8;
+                        } else if (name3 == "q" &&
+                                tagType3 == DatapointValue::T_DP_DICT &&
+                                dpv3.getDpVec()->size() == 1 &&
+                                dpv3.getDpVec()->front()->getName() == "test" &&
+                                dpv3.getDpVec()->front()->getData().getType() == DatapointValue::T_INTEGER &&
+                                dpv3.getDpVec()->front()->getData().toInt() == 0) {
+                            resMask |= 0x10;
+                        } else if (name3 == "ctlVal" &&
+                                tagType3 == DatapointValue::T_STRING &&
+                                dpv3.toStringValue() == "intermediate-state") {
+                            resMask |= 0x20;
+                        } else {
+                            TRACE("Error: Mismatching 'GTIC.%s.%s'", name2.c_str(), name3.c_str());
+                        }
+                    }
+                }
+            } else {
+                ASSERT_FALSE(true);
+            }
+        }
+        ASSERT_EQ (resMask, 0x3F);
+    }
+
+    TITLE("*** TEST FILTER JsonPivotReplyInc");
+
+    // Same as above with JsonPivotReplyInc
+    {
+        const std::string testStr(JsonPivotReplyInc);
+        Readings readings(JsonToReadingMulti(testStr, "opcua_operation"));
+        ReadingSet rSet(&readings);
+        f_reset_outputs();
+        ASSERT_EQ(called_output_handle, nullptr);
+        ASSERT_EQ(called_output_reading, nullptr);
+        TRACE("  * INGEST() /opcua_operation");
+        filter.ingest(&rSet);
+        ASSERT_EQ(called_output_handle, &stubOutH);
+        ASSERT_EQ(called_output_reading, &rSet);
+
+        DatapointValue* pivot_dv = getPivotResult(rSet);
+        ASSERT_NE(pivot_dv, nullptr);
+        ASSERT_EQ(pivot_dv->getType(), DatapointValue::T_DP_DICT);
+        Datapoints*& dpObj(pivot_dv->getDpVec());
+        ASSERT_EQ(dpObj->size(), 1);
+        Datapoint* dp = dpObj->at(0);
+        ASSERT_EQ(dp->getName(), "GTIC");
+        DatapointValue& dpv = dp->getData();
+        ASSERT_EQ(dpv.getType(), DatapointValue::T_DP_DICT);
+
+        uint32_t resMask(0);
+        for (Datapoint* dp2 : *(dpv.getDpVec())) {
+            const string name2(dp2->getName());
+            DatapointValue& dpv2 = dp2->getData();
+            const DatapointValue::dataTagType tagType(dpv2.getType());
+            if (name2 == "Select") {
+                if (tagType == DatapointValue::T_INTEGER
+                        && dpv2.toInt() == 0) {
+                    resMask |= 0x1;
+                }
+            } else if (name2 == "ComingFrom") {
+                if (tagType == DatapointValue::T_STRING
+                        && dpv2.toStringValue() == "opcua") {
+                    resMask |= 0x2;
+                }
+            } else if (name2 == "Identifier") {
+                if (tagType == DatapointValue::T_STRING
+                        && dpv2.toStringValue() == "pivotINC") {
+                    resMask |= 0x4;
+                } else {
+                    TRACE("Error: Mismatching 'GTIC.%s'", name2.c_str());
+                }
+            } else if (name2 == "INCTyp") {
+                if (tagType == DatapointValue::T_DP_DICT)
+                {
+                    for (Datapoint* dp3 : *(dpv2.getDpVec())) {
+                        const string name3(dp3->getName());
+                        DatapointValue& dpv3 = dp3->getData();
+                        const DatapointValue::dataTagType tagType3(dpv3.getType());
+                        if (name3 == "t" &&
+                                tagType3 == DatapointValue::T_DP_DICT &&
+                                dpv3.getDpVec()->size() == 1 &&
+                                dpv3.getDpVec()->front()->getName() == "SecondSinceEpoch" &&
+                                dpv3.getDpVec()->front()->getData().getType() == DatapointValue::T_INTEGER &&
+                                dpv3.getDpVec()->front()->getData().toInt() == 123456) {
+                            resMask |= 0x8;
+                        } else if (name3 == "q" &&
+                                tagType3 == DatapointValue::T_DP_DICT &&
+                                dpv3.getDpVec()->size() == 1 &&
+                                dpv3.getDpVec()->front()->getName() == "test" &&
+                                dpv3.getDpVec()->front()->getData().getType() == DatapointValue::T_INTEGER &&
+                                dpv3.getDpVec()->front()->getData().toInt() == 1) {
+                            resMask |= 0x10;
+                        } else if (name3 == "ctlVal" &&
+                                tagType3 == DatapointValue::T_INTEGER &&
+                                dpv3.toInt() == 3) {
+                            resMask |= 0x20;
+                        } else {
+                            TRACE("Error: Mismatching 'GTIC.%s.%s'", name2.c_str(), name3.c_str());
+                        }
+                    }
+                }
+            } else {
+                ASSERT_FALSE(true);
+            }
+        }
+        ASSERT_EQ (resMask, 0x3F);
+    }
+
+    TITLE("*** TEST FILTER JsonPivotReplyApc");
+
+    // Same as above with JsonPivotReplyApc
+    {
+        const std::string testStr(JsonPivotReplyApc);
+        Readings readings(JsonToReadingMulti(testStr, "opcua_operation"));
+        ReadingSet rSet(&readings);
+        f_reset_outputs();
+        ASSERT_EQ(called_output_handle, nullptr);
+        ASSERT_EQ(called_output_reading, nullptr);
+        TRACE("  * INGEST() /opcua_operation");
+        filter.ingest(&rSet);
+        ASSERT_EQ(called_output_handle, &stubOutH);
+        ASSERT_EQ(called_output_reading, &rSet);
+
+        DatapointValue* pivot_dv = getPivotResult(rSet);
+        ASSERT_NE(pivot_dv, nullptr);
+        ASSERT_EQ(pivot_dv->getType(), DatapointValue::T_DP_DICT);
+        Datapoints*& dpObj(pivot_dv->getDpVec());
+        ASSERT_EQ(dpObj->size(), 1);
+        Datapoint* dp = dpObj->at(0);
+        ASSERT_EQ(dp->getName(), "GTIC");
+        DatapointValue& dpv = dp->getData();
+        ASSERT_EQ(dpv.getType(), DatapointValue::T_DP_DICT);
+    }
+
+    TITLE("*** TEST FILTER JsonPivotReplyBsc");
+    // Same as above with JsonPivotReplyBsc
+    {
+        const std::string testStr(JsonPivotReplyBsc);
+        Readings readings(JsonToReadingMulti(testStr, "opcua_operation"));
+        ReadingSet rSet(&readings);
+        f_reset_outputs();
+        ASSERT_EQ(called_output_handle, nullptr);
+        ASSERT_EQ(called_output_reading, nullptr);
+        TRACE("  * INGEST() /opcua_operation");
+        filter.ingest(&rSet);
+        ASSERT_EQ(called_output_handle, &stubOutH);
+        ASSERT_EQ(called_output_reading, &rSet);
+
+        DatapointValue* pivot_dv = getPivotResult(rSet);
+        ASSERT_NE(pivot_dv, nullptr);
+        ASSERT_EQ(pivot_dv->getType(), DatapointValue::T_DP_DICT);
+        Datapoints*& dpObj(pivot_dv->getDpVec());
+        ASSERT_EQ(dpObj->size(), 1);
+        Datapoint* dp = dpObj->at(0);
+        ASSERT_EQ(dp->getName(), "GTIC");
+        DatapointValue& dpv = dp->getData();
+        ASSERT_EQ(dpv.getType(), DatapointValue::T_DP_DICT);
+    }
+
+    TITLE("*** TEST FILTER JsonPivotReply Bad Type");
+    // Same as above with Bad type
+    {
+        const std::string testStr(replace_in_string(JsonPivotReplyBsc,
+                "(\"opcua_bsc\")", "\"opcua_bst\""));
+        Readings readings(JsonToReadingMulti(testStr, "opcua_operation"));
+        ReadingSet rSet(&readings);
+        f_reset_outputs();
+        ASSERT_EQ(called_output_handle, nullptr);
+        ASSERT_EQ(called_output_reading, nullptr);
+        TRACE("  * INGEST() /opcua_operation");
+        filter.ingest(&rSet);
+        ASSERT_EQ(called_output_handle, &stubOutH);
+        ASSERT_EQ(called_output_reading, &rSet);
+
+        DatapointValue* pivot_dv = getPivotResult(rSet);
+        ASSERT_NE(pivot_dv, nullptr);
+        ASSERT_EQ(pivot_dv->getType(), DatapointValue::T_DP_DICT);
+        Datapoints*& dpObj(pivot_dv->getDpVec());
+        ASSERT_EQ(dpObj->size(), 1);
+        Datapoint* dp = dpObj->at(0);
+        ASSERT_EQ(dp->getName(), "GTIC");
+        ASSERT_EQ(dp->getData().getType(), DatapointValue::T_DP_DICT);
+    }
+
+    TITLE("*** TEST FILTER JsonPivotReply Mismatching Int Type");
+    // Same as above with Mismatching Int type
+    {
+        const std::string testStr(replace_in_string(JsonPivotReplyBsc,
+                "123456", "\"123456\""));
+        Readings readings(JsonToReadingMulti(testStr, "opcua_operation"));
+        ReadingSet rSet(&readings);
+        f_reset_outputs();
+        ASSERT_EQ(called_output_handle, nullptr);
+        ASSERT_EQ(called_output_reading, nullptr);
+        TRACE("  * INGEST() /opcua_operation");
+        filter.ingest(&rSet);
+        ASSERT_EQ(called_output_handle, &stubOutH);
+        ASSERT_EQ(called_output_reading, &rSet);
+
+        DatapointValue* pivot_dv = getPivotResult(rSet);
+        ASSERT_EQ(pivot_dv, nullptr);
+    }
+
+    TITLE("*** TEST FILTER JsonPivotReply Mismatching Str Type");
+    // Same as above with Mismatching Str type
+    {
+        const std::string testStr(replace_in_string(JsonPivotReplyBsc,
+                QUOTE("pivotBSC"), "73"));
+        Readings readings(JsonToReadingMulti(testStr, "opcua_operation"));
+        ReadingSet rSet(&readings);
+        f_reset_outputs();
+        ASSERT_EQ(called_output_handle, nullptr);
+        ASSERT_EQ(called_output_reading, nullptr);
+        TRACE("  * INGEST() /opcua_operation");
+        filter.ingest(&rSet);
+        ASSERT_EQ(called_output_handle, &stubOutH);
+        ASSERT_EQ(called_output_reading, &rSet);
+
+        DatapointValue* pivot_dv = getPivotResult(rSet);
+        ASSERT_EQ(pivot_dv, nullptr);
+    }
+
+    TITLE("*** TEST FILTER JsonPivotReply Mismatching Str Type");
+    // Same as above with Missing field
+    {
+        const std::string testStr(replace_in_string(JsonPivotReplyBsc,
+                "co_type", "ro_type"));
+        Readings readings(JsonToReadingMulti(testStr, "opcua_operation"));
+        ReadingSet rSet(&readings);
+        f_reset_outputs();
+        ASSERT_EQ(called_output_handle, nullptr);
+        ASSERT_EQ(called_output_reading, nullptr);
+        TRACE("  * INGEST() /opcua_operation");
+        filter.ingest(&rSet);
+        ASSERT_EQ(called_output_handle, &stubOutH);
+        ASSERT_EQ(called_output_reading, &rSet);
+
+        DatapointValue* pivot_dv = getPivotResult(rSet);
+        ASSERT_EQ(pivot_dv, nullptr);
+    }
+
+    TITLE("*** TEST FILTER Pivot2OpcuaReply");
+    // reference test
+    {
+        const std::string testStr(
+                replace_in_string(JsonPivotReply2, "__REPLY__", "false"));
+        INGEST(rSet, testStr, "Ref test");
+        DatapointValue* ro_dv = getRoResult(rSet);
+        ASSERT_NE(ro_dv, nullptr);
+        ASSERT_EQ(ro_dv->getType(), DatapointValue::T_DP_DICT);
+        Datapoints*& dp2(ro_dv->getDpVec());
+
+        // Check that ro_dv contains {"ro_reply":"1, "ro_id":"pivotINC"}
+        ASSERT_EQ(checkRoResult(ro_dv->getDpVec(), "pivotINC", 1), 0x3);
+    }
+
+    TITLE("*** TEST FILTER Pivot2OpcuaReply-nok1");
+    {
+        // reply is not BOOL
+        const std::string testStr(
+                replace_in_string(JsonPivotReply2, "__REPLY__", QUOTE("false")));
+        INGEST(rSet, testStr, "Pivot2OpcuaReply-nok1");
+        DatapointValue* ro_dv = getRoResult(rSet);
+        ASSERT_EQ(ro_dv, nullptr);
+    }
+
+    TITLE("*** TEST FILTER Pivot2OpcuaReply-nok2");
+    {
+        // Identifier is not STRING
+        const std::string testStr(
+                replace_in_string(
+                        replace_in_string(JsonPivotReply2, "__REPLY__", "false"),
+                        QUOTE("pivotINC"),"32"));
+        INGEST(rSet, testStr, "Pivot2OpcuaReply-nok2");
+        DatapointValue* ro_dv = getRoResult(rSet);
+        ASSERT_EQ(ro_dv, nullptr);
+    }
+
+    TITLE("*** TEST FILTER Pivot2OpcuaReply-nok3");
+    {
+        // Confirmation is not DICT
+        const std::string testStr(
+                replace_in_string(JsonPivotReply2,
+                        "Confirmation.*__REPLY__.",
+                        "Confirmation\" : false"));
+        INGEST(rSet, testStr, "Pivot2OpcuaReply-nok3");
+        DatapointValue* ro_dv = getRoResult(rSet);
+        ASSERT_EQ(ro_dv, nullptr);
+    }
+}
+
 #undef INGEST
 #define INGEST(rSet, json, _type)  \
     ReadingSet rSet;                                    \
-    rSet.append(JsonToReading(json, _type));            \
+    appendJsonToReadingSet(rSet, json, _type);          \
                                                         \
     f_reset_outputs();                                  \
     ASSERT_EQ(called_output_handle, nullptr);           \
@@ -1004,7 +1359,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterMissFields) {
     ASSERT_EQ(called_output_handle, &stubOutH);         \
     ASSERT_EQ(called_output_reading, &rSet);
 
-// Test lugin APIS
+// Test plugin APIS
 TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterApi) {
     TITLE("*** TEST FILTER Pivot2OpcuaFilterApi");
 
