@@ -902,7 +902,7 @@ Pivot2OpcuaFilter::opcua2pivot(Reading* reading)const {
          */
         // The Value must be read before cleaning old datapoints!
 
-        Datapoint* pivot = createDatapoint("PIVOT");
+        Datapoint* pivot = createDatapoint("PIVOTTC");
         Datapoint* gtic = datapointAddElement(pivot, "GTIC");
         datapointAddElementWithValue(gtic, "Select", co_se);
         datapointAddElementWithValue(gtic, "ComingFrom", "opcua");
@@ -949,6 +949,7 @@ Pivot2OpcuaFilter::ingest(ReadingSet *readingSet) {
             // proceed to conversion
             if (assetName == "opcua_operation") {
                 opcua2pivot(reading);
+                reading->setAssetName("PivotCommand");
             } else {
                 // Default case convert PIVOT to OPCUA
                 pivot2opcua(reading);

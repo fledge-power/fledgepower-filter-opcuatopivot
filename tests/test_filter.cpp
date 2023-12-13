@@ -1224,7 +1224,7 @@ TEST(Pivot2Opcua_Filter, Pivot2OpcuaFilterReply) {
         f_reset_outputs();
         ASSERT_EQ(called_output_handle, nullptr);
         ASSERT_EQ(called_output_reading, nullptr);
-        TRACE("  * INGEST() /opcua_operation");
+        TRACE("  * INGEST() /PivotCommand");
         filter.ingest(&rSet);
         ASSERT_EQ(called_output_handle, &stubOutH);
         ASSERT_EQ(called_output_reading, &rSet);

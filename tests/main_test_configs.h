@@ -228,7 +228,7 @@ inline DatapointValue* getRoResult(ReadingSet& rSet) {
 
 inline DatapointValue* getPivotResult(ReadingSet& rSet) {
     Datapoints& dp(rSet.getAllReadingsPtr()->back()->getReadingData());
-    return get_datapoint_by_key(&dp, "PIVOT");
+    return get_datapoint_by_key(&dp, "PIVOTTC");
 }
 
 static uint32_t checkRoResult(Datapoints* dp, const string& id, int reply) {
